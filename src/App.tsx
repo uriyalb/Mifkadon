@@ -1,15 +1,29 @@
 import { useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { SessionProvider } from './context/SessionContext'
+import { SessionProvider, useSession } from './context/SessionContext'
 import LoginPage from './pages/LoginPage'
 import ImportPage from './pages/ImportPage'
 import SwipePage from './pages/SwipePage'
 import ResultsPage from './pages/ResultsPage'
+import { mockContacts } from './data/mockContacts'
 
 export type AppPage = 'login' | 'import' | 'swipe' | 'results'
 
+function DemoAutoStart({ onStart }: { onStart: () => void }) {
+  const { initSession } = useSession();
+  useEffect(() => {
+    initSession(mockContacts);
+    onStart();
+  }, []);
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
 function AppRouter() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, demoMode } = useAuth()
   const [page, setPage] = useState<AppPage>('login')
 
   useEffect(() => {
@@ -36,7 +50,9 @@ function AppRouter() {
   return (
     <SessionProvider>
       {page === 'import' && (
-        <ImportPage onStart={() => setPage('swipe')} />
+        demoMode
+          ? <DemoAutoStart onStart={() => setPage('swipe')} />
+          : <ImportPage onStart={() => setPage('swipe')} />
       )}
       {page === 'swipe' && (
         <SwipePage

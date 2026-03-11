@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { mockContacts } from '../data/mockContacts';
 
 interface Props {
   onLogin: () => void;
@@ -17,7 +18,7 @@ const SCOPES = [
 ].join(' ');
 
 export default function LoginPage({ onLogin }: Props) {
-  const { signIn } = useAuth();
+  const { signIn, enterDemoMode } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,6 +113,21 @@ export default function LoginPage({ onLogin }: Props) {
             </svg>
           )}
           {isLoading ? 'מתחבר...' : 'התחבר עם Google'}
+        </motion.button>
+
+        <div className="relative my-4 flex items-center gap-3">
+          <div className="flex-1 h-px bg-white/20" />
+          <span className="text-white/40 text-xs">או</span>
+          <div className="flex-1 h-px bg-white/20" />
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { enterDemoMode(); onLogin(); }}
+          className="w-full glass text-gray-700 font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2 text-sm"
+        >
+          ▶ הפעל דמו — {mockContacts.length} אנשי קשר לדוגמה
         </motion.button>
 
         <p className="text-white/50 text-xs mt-4 leading-relaxed">

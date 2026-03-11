@@ -18,7 +18,7 @@ const PRIORITY_CONFIG = {
 };
 
 export default function ResultsPage({ onReset }: Props) {
-  const { user } = useAuth();
+  const { user, demoMode } = useAuth();
   const { session, spreadsheetId, resetSession } = useSession();
   const [isSyncing, setIsSyncing] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function ResultsPage({ onReset }: Props) {
 
   // Auto-sync approved tab when results page opens
   useEffect(() => {
-    if (!user || !spreadsheetId || selected.length === 0) return;
+    if (demoMode || !user || !spreadsheetId || selected.length === 0) return;
     setIsSyncing(true);
     syncApprovedTab(user.accessToken, spreadsheetId, selected)
       .then(() => {
@@ -86,7 +86,11 @@ export default function ResultsPage({ onReset }: Props) {
 
         {/* Google Sheets sync */}
         <div className="glass rounded-2xl p-4 mb-4">
-          {isSyncing ? (
+          {demoMode ? (
+            <p className="text-gray-500 text-sm text-center">
+              🎭 <strong>מצב דמו</strong> — התחבר עם Google לייצוא ל-Google Sheets
+            </p>
+          ) : isSyncing ? (
             <div className="flex items-center gap-3">
               <div className="w-5 h-5 border-2 border-[#FF2D78] border-t-transparent rounded-full animate-spin" />
               <span className="text-gray-600 text-sm">מסנכרן עם Google Sheets...</span>
