@@ -77,13 +77,13 @@ export default function LoginPage({ onLogin }: Props) {
         {/* Features */}
         <div className="glass rounded-2xl p-4 mb-6 text-right space-y-2.5">
           {[
-            { icon: '🔒', text: 'המידע נשמר רק ב-Google Drive האישי שלך' },
-            { icon: '📱', text: 'ייבוא מ-Google Contacts, פייסבוק ואינסטגרם' },
-            { icon: '❤️', text: 'ממשק החלקה כמו אפליקציית היכרויות' },
-            { icon: '🔥', text: 'סיווג לפי עדיפות: גבוהה, בינונית, נמוכה' },
+            { text: 'המידע נשמר רק ב-Google Drive האישי שלך' },
+            { text: 'ייבוא מ-Google Contacts, פייסבוק ואינסטגרם' },
+            { text: 'ממשק החלקה כמו אפליקציית היכרויות' },
+            { text: 'סיווג לפי עדיפות: ניצחון מהיר, סיכוי טוב, דרושה עבודה' },
           ].map((item) => (
             <div key={item.text} className="flex items-center gap-3">
-              <span className="text-xl flex-shrink-0">{item.icon}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0" />
               <span className="text-gray-700 text-sm">{item.text}</span>
             </div>
           ))}
