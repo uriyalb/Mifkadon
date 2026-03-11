@@ -120,11 +120,11 @@ export default function SwipePage({ onFinish, onBack }: Props) {
                 className="flex flex-col items-center justify-center h-[520px] text-center"
               >
                 <motion.div
-                  animate={{ rotate: [0, -10, 10, -10, 10, 0], scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.6 }}
-                  className="text-8xl mb-6"
+                  animate={{ scale: [0.8, 1.15, 1] }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="w-24 h-24 rounded-full gradient-pink flex items-center justify-center mb-6 shadow-xl"
                 >
-                  🎉
+                  <span className="text-white font-black text-5xl leading-none">✓</span>
                 </motion.div>
                 <h2 className="text-3xl font-black text-white mb-2">כל הכבוד!</h2>
                 <p className="text-white/80 text-lg">סיימת למיין את כל אנשי הקשר</p>
@@ -143,39 +143,6 @@ export default function SwipePage({ onFinish, onBack }: Props) {
           </AnimatePresence>
         </div>
 
-        {/* Action buttons */}
-        {remaining.length > 0 && !showDone && (
-          <div className="flex gap-6 mt-6" dir="rtl">
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => remaining[0] && handleSwipeLeft(remaining[0])}
-              className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center text-2xl border-2 border-[#2D9CFF]/30"
-              title="דלג (←)"
-            >
-              👋
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => remaining[0] && handleSwipeRight(remaining[0], 'medium')}
-              className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center text-2xl border-2 border-[#FF2D78]/30"
-              title="שמור - עדיפות בינונית (→)"
-            >
-              ❤️
-            </motion.button>
-          </div>
-        )}
-
-        {/* Priority legend */}
-        {remaining.length > 0 && !showDone && (
-          <div className="mt-4 flex gap-4 text-xs text-white/70" dir="rtl">
-            <span>🔥 גבוהה = גרור מעלה+ימינה</span>
-            <span>⭐ בינונית = גרור ישר ימינה</span>
-            <span>✓ נמוכה = גרור למטה+ימינה</span>
-          </div>
-        )}
       </div>
 
       {/* Back button */}
