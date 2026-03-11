@@ -5,14 +5,14 @@
   --color-pink-light: #FF6BA8;
   --color-pink-pale: #FFE0EE;
   --color-pink-bg: #FFF0F6;
-  --color-skip: #2D9CFF;
-  --color-skip-light: #93C5FD;
-  --color-high: #FF4444;
-  --color-high-light: #FFAAAA;
-  --color-medium: #FFB800;
-  --color-medium-light: #FFE08A;
-  --color-low: #00C98D;
-  --color-low-light: #A7F3D0;
+  --color-skip: #EF4444;
+  --color-skip-light: #FCA5A5;
+  --color-high: #22C55E;
+  --color-high-light: #86EFAC;
+  --color-medium: #84CC16;
+  --color-medium-light: #D9F99D;
+  --color-low: #EAB308;
+  --color-low-light: #FEF08A;
 }
 
 @layer base {
@@ -64,30 +64,30 @@
   }
 
   .gradient-skip {
-    background: linear-gradient(135deg, #2D9CFF, #60C2FF);
+    background: linear-gradient(135deg, #EF4444, #F87171);
   }
 
   .gradient-high {
-    background: linear-gradient(135deg, #FF4444, #FF7777);
+    background: linear-gradient(135deg, #22C55E, #4ADE80);
   }
 
   .gradient-medium {
-    background: linear-gradient(135deg, #FFB800, #FFD060);
+    background: linear-gradient(135deg, #84CC16, #BEF264);
   }
 
   .gradient-low {
-    background: linear-gradient(135deg, #00C98D, #34D9AA);
+    background: linear-gradient(135deg, #EAB308, #FDE047);
   }
 
   .zone-glow-high {
-    box-shadow: 0 0 20px rgba(255, 68, 68, 0.6), 0 0 40px rgba(255, 68, 68, 0.3);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.7), 0 0 48px rgba(34, 197, 94, 0.35);
   }
 
   .zone-glow-medium {
-    box-shadow: 0 0 20px rgba(255, 184, 0, 0.6), 0 0 40px rgba(255, 184, 0, 0.3);
+    box-shadow: 0 0 24px rgba(132, 204, 22, 0.7), 0 0 48px rgba(132, 204, 22, 0.35);
   }
 
   .zone-glow-low {
-    box-shadow: 0 0 20px rgba(0, 201, 141, 0.6), 0 0 40px rgba(0, 201, 141, 0.3);
+    box-shadow: 0 0 24px rgba(234, 179, 8, 0.7), 0 0 48px rgba(234, 179, 8, 0.35);
   }
 }

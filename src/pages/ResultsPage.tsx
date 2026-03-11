@@ -12,9 +12,9 @@ interface Props {
 }
 
 const PRIORITY_CONFIG = {
-  high: { label: 'עדיפות גבוהה', emoji: '🔥', bgClass: 'gradient-high', textColor: 'text-red-600', bgLight: 'bg-red-50', border: 'border-red-200' },
-  medium: { label: 'עדיפות בינונית', emoji: '⭐', bgClass: 'gradient-medium', textColor: 'text-yellow-600', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
-  low: { label: 'עדיפות נמוכה', emoji: '✓', bgClass: 'gradient-low', textColor: 'text-emerald-600', bgLight: 'bg-emerald-50', border: 'border-emerald-200' },
+  high:   { label: 'ניצחון מהיר', bgClass: 'gradient-high',   textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
+  medium: { label: 'סיכוי טוב',   bgClass: 'gradient-medium', textColor: 'text-lime-700',   bgLight: 'bg-lime-50',   border: 'border-lime-200' },
+  low:    { label: 'דרושה עבודה', bgClass: 'gradient-low',    textColor: 'text-yellow-700', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
 };
 
 export default function ResultsPage({ onReset }: Props) {
@@ -70,9 +70,8 @@ export default function ResultsPage({ onReset }: Props) {
                 onClick={() => setActiveTab((prev) => prev === p ? 'all' : p)}
                 className={`${cfg.bgClass} rounded-2xl p-3 text-center cursor-pointer shadow-md transition-all ${activeTab === p ? 'ring-4 ring-white/60 scale-105' : ''}`}
               >
-                <span className="text-2xl">{cfg.emoji}</span>
-                <p className="text-white font-black text-xl">{byPriority[p].length}</p>
-                <p className="text-white/80 text-[10px]">{cfg.label}</p>
+                <p className="text-white font-black text-3xl">{byPriority[p].length}</p>
+                <p className="text-white/90 text-[10px] font-bold leading-tight px-1">{cfg.label}</p>
               </motion.div>
             );
           })}
@@ -88,7 +87,7 @@ export default function ResultsPage({ onReset }: Props) {
         <div className="glass rounded-2xl p-4 mb-4">
           {demoMode ? (
             <p className="text-gray-500 text-sm text-center">
-              🎭 <strong>מצב דמו</strong> — התחבר עם Google לייצוא ל-Google Sheets
+              <strong>מצב דמו</strong> — התחבר עם Google לייצוא ל-Google Sheets
             </p>
           ) : isSyncing ? (
             <div className="flex items-center gap-3">
@@ -97,14 +96,14 @@ export default function ResultsPage({ onReset }: Props) {
             </div>
           ) : sheetUrl ? (
             <div>
-              <p className="text-green-600 font-bold text-sm mb-2">✅ הנתונים סונכרנו בהצלחה!</p>
+              <p className="text-green-600 font-bold text-sm mb-2">הנתונים סונכרנו בהצלחה</p>
               <a
                 href={sheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full gradient-pink text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                className="w-full gradient-pink text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center hover:opacity-90 transition-opacity"
               >
-                <span>📊</span> פתח Google Sheets
+                פתח Google Sheets
               </a>
             </div>
           ) : error ? (
@@ -133,9 +132,9 @@ export default function ResultsPage({ onReset }: Props) {
         {/* Tab filter */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           <TabChip label="הכל" count={selected.length} active={activeTab === 'all'} onClick={() => setActiveTab('all')} />
-          <TabChip label="🔥 גבוהה" count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-red-100 text-red-600" />
-          <TabChip label="⭐ בינונית" count={byPriority.medium.length} active={activeTab === 'medium'} onClick={() => setActiveTab('medium')} color="bg-yellow-100 text-yellow-600" />
-          <TabChip label="✓ נמוכה" count={byPriority.low.length} active={activeTab === 'low'} onClick={() => setActiveTab('low')} color="bg-emerald-100 text-emerald-600" />
+          <TabChip label="ניצחון מהיר" count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-green-100 text-green-700" />
+          <TabChip label="סיכוי טוב" count={byPriority.medium.length} active={activeTab === 'medium'} onClick={() => setActiveTab('medium')} color="bg-lime-100 text-lime-700" />
+          <TabChip label="דרושה עבודה" count={byPriority.low.length} active={activeTab === 'low'} onClick={() => setActiveTab('low')} color="bg-yellow-100 text-yellow-700" />
         </div>
 
         {/* Contact list */}
@@ -158,7 +157,7 @@ export default function ResultsPage({ onReset }: Props) {
                   {!contact.phone && contact.email && <p className="text-xs text-gray-500 truncate">{contact.email}</p>}
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-bold ${cfg.bgLight} ${cfg.textColor}`}>
-                  {cfg.emoji}
+                  {cfg.label}
                 </span>
               </motion.div>
             );
@@ -167,8 +166,10 @@ export default function ResultsPage({ onReset }: Props) {
 
         {selected.length === 0 && (
           <div className="text-center py-12">
-            <span className="text-5xl">🤷</span>
-            <p className="text-white/70 mt-3">לא נבחרו אנשי קשר</p>
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+              <span className="text-white/60 text-2xl font-black">—</span>
+            </div>
+            <p className="text-white/70">לא נבחרו אנשי קשר</p>
           </div>
         )}
 
@@ -178,7 +179,7 @@ export default function ResultsPage({ onReset }: Props) {
             onClick={handleReset}
             className="glass text-gray-600 font-bold py-3 px-6 rounded-2xl text-sm hover:bg-white/80 transition-all"
           >
-            🔄 התחל מחדש
+            התחל מחדש
           </button>
         </div>
       </div>

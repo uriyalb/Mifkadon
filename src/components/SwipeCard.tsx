@@ -48,8 +48,8 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
       const priority = getPriority(oy);
       const exitY = priority === 'high' ? -200 : priority === 'low' ? 200 : 0;
       await Promise.all([
-        animate(dragX, 700, { duration: 0.28, ease: 'easeIn' }),
-        animate(dragY, exitY, { duration: 0.28, ease: 'easeIn' }),
+        animate(dragX, 700, { duration: 0.32, ease: 'easeIn' }),
+        animate(dragY, exitY, { duration: 0.32, ease: 'easeIn' }),
       ]);
       onSwipeRight(priority);
       // Reset for next card
@@ -57,8 +57,8 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
       dragY.set(0);
     } else if (ox < -SWIPE_THRESHOLD) {
       await Promise.all([
-        animate(dragX, -700, { duration: 0.28, ease: 'easeIn' }),
-        animate(dragY, 0, { duration: 0.28, ease: 'easeIn' }),
+        animate(dragX, -700, { duration: 0.32, ease: 'easeIn' }),
+        animate(dragY, 0, { duration: 0.32, ease: 'easeIn' }),
       ]);
       onSwipeLeft();
       dragX.set(0);
@@ -66,8 +66,8 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
     } else {
       // Snap back
       await Promise.all([
-        animate(dragX, 0, { type: 'spring', stiffness: 300, damping: 25 }),
-        animate(dragY, 0, { type: 'spring', stiffness: 300, damping: 25 }),
+        animate(dragX, 0, { type: 'spring', stiffness: 280, damping: 30 }),
+        animate(dragY, 0, { type: 'spring', stiffness: 280, damping: 30 }),
       ]);
     }
   };
@@ -96,7 +96,7 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
           >
             <div className="absolute inset-0 bg-[#FF2D78]/20 rounded-3xl" />
             <div className="rotate-[-20deg] border-4 border-[#FF2D78] rounded-2xl px-6 py-2 z-30">
-              <span className="text-[#FF2D78] font-black text-3xl tracking-widest">שמור ❤️</span>
+              <span className="text-[#FF2D78] font-black text-3xl tracking-widest">שמור</span>
             </div>
           </motion.div>
         )}
@@ -107,9 +107,9 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
             style={{ opacity: skipOpacity }}
             className="absolute inset-0 rounded-3xl z-20 flex items-center justify-center pointer-events-none"
           >
-            <div className="absolute inset-0 bg-[#2D9CFF]/20 rounded-3xl" />
-            <div className="rotate-[20deg] border-4 border-[#2D9CFF] rounded-2xl px-6 py-2 z-30">
-              <span className="text-[#2D9CFF] font-black text-3xl tracking-widest">דלג 👋</span>
+            <div className="absolute inset-0 bg-[#EF4444]/20 rounded-3xl" />
+            <div className="rotate-[20deg] border-4 border-[#EF4444] rounded-2xl px-6 py-2 z-30">
+              <span className="text-[#EF4444] font-black text-3xl tracking-widest">דלג</span>
             </div>
           </motion.div>
         )}
@@ -132,15 +132,13 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
 
           <div className="mt-3 flex flex-col gap-1.5">
             {contact.phone && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 justify-end">
-                <span dir="ltr">{contact.phone}</span>
-                <span>📱</span>
+              <div className="flex items-center text-sm text-gray-500 justify-end">
+                <span dir="ltr" className="font-mono tracking-wide">{contact.phone}</span>
               </div>
             )}
             {contact.email && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 justify-end">
-                <span className="truncate max-w-[200px]">{contact.email}</span>
-                <span>✉️</span>
+              <div className="flex items-center text-sm text-gray-500 justify-end">
+                <span className="truncate max-w-[220px]">{contact.email}</span>
               </div>
             )}
           </div>
@@ -152,17 +150,6 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
           </div>
         </div>
 
-        {/* Bottom hint (top card only) */}
-        {isTop && (
-          <div className="px-5 pb-4 text-center" dir="rtl">
-            <p className="text-xs text-gray-400">
-              גרור לימין לשמירה • גרור שמאלה לדילוג
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              גובה הגרירה קובע את העדיפות: 🔥 למעלה / ⭐ אמצע / ✓ למטה
-            </p>
-          </div>
-        )}
       </motion.div>
     </motion.div>
   );
