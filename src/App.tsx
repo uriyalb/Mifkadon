@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SessionProvider, useSession } from './context/SessionContext'
 import LoginPage from './pages/LoginPage'
@@ -10,11 +10,22 @@ import { mockContacts } from './data/mockContacts'
 export type AppPage = 'login' | 'import' | 'swipe' | 'results'
 
 function DemoAutoStart({ onStart }: { onStart: () => void }) {
-  const { initSession } = useSession();
+  const { initSession, session } = useSession();
+  const navigated = useRef(false);
+
   useEffect(() => {
     initSession(mockContacts);
-    onStart();
   }, []);
+
+  // Wait for session state to be set before navigating to SwipePage,
+  // otherwise SwipePage mounts with session===null and contacts never load.
+  useEffect(() => {
+    if (session && !navigated.current) {
+      navigated.current = true;
+      onStart();
+    }
+  }, [session]);
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin" />
