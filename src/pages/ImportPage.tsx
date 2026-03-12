@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { Contact } from '../types/contact';
 import { fetchGoogleContacts } from '../services/googleContacts';
-import { fetchFacebookFriends } from '../services/facebookContacts';
+import { readFacebookFile } from '../services/facebookContacts';
 import { readInstagramFile } from '../services/instagramImport';
 import { readVCardFile } from '../services/vcardImport';
 import {
@@ -35,8 +35,6 @@ interface ManualContact {
   phone: string;
   email: string;
 }
-
-const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID as string;
 
 function normalizePhone(p: string): string {
   const d = p.replace(/\D/g, '');
@@ -78,6 +76,7 @@ export default function ImportPage({ onStart }: Props) {
   const [resumeInfo, setResumeInfo] = useState<{ spreadsheetId: string; pending: number } | null>(null);
   const [checkingResume, setCheckingResume] = useState(true);
 
+  const facebookInputRef = useRef<HTMLInputElement>(null);
   const instagramInputRef = useRef<HTMLInputElement>(null);
   const vcardInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,18 +130,16 @@ export default function ImportPage({ onStart }: Props) {
     }
   };
 
-  const handleFacebook = async () => {
-    if (!FB_APP_ID) {
-      updateSource('facebook', { status: 'error', error: 'Facebook App ID לא מוגדר' });
-      return;
-    }
+  const handleFacebookFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     updateSource('facebook', { status: 'loading' });
     try {
-      const contacts = await fetchFacebookFriends(FB_APP_ID);
+      const contacts = await readFacebookFile(file);
       updateSource('facebook', { status: 'done', count: contacts.length });
       addContacts(contacts);
-    } catch (e) {
-      updateSource('facebook', { status: 'error', error: (e as Error).message });
+    } catch (err) {
+      updateSource('facebook', { status: 'error', error: (err as Error).message });
     }
   };
 
@@ -320,13 +317,42 @@ export default function ImportPage({ onStart }: Props) {
           <SourceCard
             color={SOURCE_COLOR.facebook}
             title="Facebook"
-            description="ייבוא חברים משותפים מפייסבוק (רק חברים שאישרו את האפליקציה)"
+            description="ייבוא חברים מקובץ JSON של פייסבוק (friends.json)"
             status={sources.facebook.status}
             count={sources.facebook.count}
             error={sources.facebook.error}
-            onAction={handleFacebook}
-            actionLabel="התחבר"
-          />
+            onAction={() => facebookInputRef.current?.click()}
+            actionLabel="בחר קובץ"
+          >
+            <input
+              ref={facebookInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleFacebookFile}
+            />
+            {sources.facebook.status === 'idle' && (
+              <div className="text-xs text-gray-500 mt-2 space-y-1.5">
+                <a
+                  href="https://www.facebook.com/dyi/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#FF2D78] font-medium underline underline-offset-2"
+                >
+                  פתח את דף הורדת הנתונים של פייסבוק
+                </a>
+                <details>
+                  <summary className="cursor-pointer text-[#FF2D78] font-medium">הוראות</summary>
+                  <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
+                    <li>בחר "הורד את המידע שלך" ← "בחר סוגי מידע ספציפיים"</li>
+                    <li>סמן "חברים ועוקבים" בלבד</li>
+                    <li>בחר פורמט JSON ← "בקש קבצים"</li>
+                    <li>לאחר קבלת הקובץ — פתח את friends.json מהארכיון</li>
+                  </ol>
+                </details>
+              </div>
+            )}
+          </SourceCard>
 
           {/* Instagram */}
           <SourceCard
@@ -347,16 +373,25 @@ export default function ImportPage({ onStart }: Props) {
               onChange={handleInstagramFile}
             />
             {sources.instagram.status === 'idle' && (
-              <details className="text-xs text-gray-500 mt-2">
-                <summary className="cursor-pointer text-[#FF2D78] font-medium">
-                  איך מייצאים נתונים מאינסטגרם?
-                </summary>
-                <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
-                  <li>הגדרות → פרטיות → הורד את הנתונים שלך</li>
-                  <li>בחר פורמט JSON ובקש הורדה</li>
-                  <li>פתח את הקובץ followers_1.json מהארכיון שיגיע למייל</li>
-                </ol>
-              </details>
+              <div className="text-xs text-gray-500 mt-2 space-y-1.5">
+                <a
+                  href="https://accountscenter.instagram.com/info_and_permissions/dyi/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#FF2D78] font-medium underline underline-offset-2"
+                >
+                  פתח את דף הורדת הנתונים של אינסטגרם
+                </a>
+                <details>
+                  <summary className="cursor-pointer text-[#FF2D78] font-medium">הוראות</summary>
+                  <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
+                    <li>בחר "הורד או העבר מידע" ← "מידע ספציפי"</li>
+                    <li>סמן "עוקבים ועוקבים אחרי" בלבד</li>
+                    <li>בחר פורמט JSON ← "צור קבצים"</li>
+                    <li>פתח את הקובץ followers_1.json מהארכיון שיגיע למייל</li>
+                  </ol>
+                </details>
+              </div>
             )}
           </SourceCard>
 
