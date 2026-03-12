@@ -5,9 +5,9 @@ const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
 const SPREADSHEET_TITLE_PREFIX = 'מיפקדון';
 
 const PRIORITY_LABEL: Record<string, string> = {
-  high: '🔥 גבוהה',
-  medium: '⭐ בינונית',
-  low: '✓ נמוכה',
+  high: 'ניצחון מהיר',
+  medium: 'סיכוי טוב',
+  low: 'דרושה עבודה',
 };
 
 // Tab names (URL-encoded for API calls)
