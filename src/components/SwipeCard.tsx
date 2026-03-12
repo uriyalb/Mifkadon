@@ -27,6 +27,7 @@ const SOURCE_LABEL: Record<string, string> = {
   facebook: 'Facebook',
   instagram: 'Instagram',
   manual: 'ידני',
+  phone: 'אנשי קשר',
 };
 
 export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipeLeft, isTop, stackIndex }: Props) {

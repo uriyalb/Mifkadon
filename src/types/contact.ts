@@ -1,4 +1,4 @@
-export type ContactSource = 'google' | 'facebook' | 'instagram' | 'manual';
+export type ContactSource = 'google' | 'facebook' | 'instagram' | 'manual' | 'phone';
 
 export type Priority = 'high' | 'medium' | 'low';
 

@@ -6,6 +6,7 @@ import type { Contact } from '../types/contact';
 import { fetchGoogleContacts } from '../services/googleContacts';
 import { fetchFacebookFriends } from '../services/facebookContacts';
 import { readInstagramFile } from '../services/instagramImport';
+import { readVCardFile } from '../services/vcardImport';
 import {
   findExistingSpreadsheet,
   createSpreadsheet,
@@ -18,7 +19,7 @@ interface Props {
   onStart: () => void;
 }
 
-type SourceKey = 'google' | 'facebook' | 'instagram' | 'manual';
+type SourceKey = 'google' | 'facebook' | 'instagram' | 'phone' | 'manual';
 type Status = 'idle' | 'loading' | 'done' | 'error';
 
 interface SourceState {
@@ -35,49 +36,70 @@ interface ManualContact {
 
 const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID as string;
 
+// Colour dot per source (no emojis)
+const SOURCE_COLOR: Record<SourceKey, string> = {
+  google: 'bg-green-400',
+  facebook: 'bg-blue-500',
+  instagram: 'bg-purple-500',
+  phone: 'bg-teal-400',
+  manual: 'bg-gray-400',
+};
+
 export default function ImportPage({ onStart }: Props) {
   const { user } = useAuth();
   const { initSession, setSpreadsheetId, resetSession } = useSession();
+
   const [sources, setSources] = useState<Record<SourceKey, SourceState>>({
-    google: { status: 'idle', count: 0 },
-    facebook: { status: 'idle', count: 0 },
+    google:    { status: 'idle', count: 0 },
+    facebook:  { status: 'idle', count: 0 },
     instagram: { status: 'idle', count: 0 },
-    manual: { status: 'idle', count: 0 },
+    phone:     { status: 'idle', count: 0 },
+    manual:    { status: 'idle', count: 0 },
   });
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
+
+  // Save-to-Sheets state
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedCount, setSavedCount] = useState<number | null>(null); // null = not saved yet
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const [isStarting, setIsStarting] = useState(false);
   const [manualForm, setManualForm] = useState<ManualContact>({ name: '', phone: '', email: '' });
   const [showManual, setShowManual] = useState(false);
   const [resumeInfo, setResumeInfo] = useState<{ spreadsheetId: string; pending: number } | null>(null);
   const [checkingResume, setCheckingResume] = useState(true);
-  const instagramInputRef = useRef<HTMLInputElement>(null);
 
-  // Check for existing spreadsheet on mount
+  const instagramInputRef = useRef<HTMLInputElement>(null);
+  const vcardInputRef = useRef<HTMLInputElement>(null);
+
+  // Check for an existing spreadsheet to offer resume
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setCheckingResume(false); return; }
     findExistingSpreadsheet(user.accessToken, user.email)
       .then(async (id) => {
         if (id) {
           const pending = await loadPendingContacts(user.accessToken, id);
-          if (pending.length > 0) {
-            setResumeInfo({ spreadsheetId: id, pending: pending.length });
-          }
+          if (pending.length > 0) setResumeInfo({ spreadsheetId: id, pending: pending.length });
         }
       })
       .catch(() => {})
       .finally(() => setCheckingResume(false));
   }, [user]);
 
-  const updateSource = (key: SourceKey, update: Partial<SourceState>) => {
+  const updateSource = (key: SourceKey, update: Partial<SourceState>) =>
     setSources((prev) => ({ ...prev, [key]: { ...prev[key], ...update } }));
-  };
 
   const addContacts = (newContacts: Contact[]) => {
     setAllContacts((prev) => {
-      const existingIds = new Set(prev.map((c) => c.id));
-      return [...prev, ...newContacts.filter((c) => !existingIds.has(c.id))];
+      const existing = new Set(prev.map((c) => c.id));
+      return [...prev, ...newContacts.filter((c) => !existing.has(c.id))];
     });
+    // Any new import invalidates a previous save
+    setSavedCount(null);
+    setSaveError(null);
   };
+
+  // ── Source handlers ───────────────────────────────────────────────────────
 
   const handleGoogle = async () => {
     if (!user) return;
@@ -119,6 +141,20 @@ export default function ImportPage({ onStart }: Props) {
     }
   };
 
+  const handleVCardFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    updateSource('phone', { status: 'loading' });
+    try {
+      const contacts = await readVCardFile(file);
+      if (contacts.length === 0) throw new Error('לא נמצאו אנשי קשר בקובץ');
+      updateSource('phone', { status: 'done', count: contacts.length });
+      addContacts(contacts);
+    } catch (err) {
+      updateSource('phone', { status: 'error', error: (err as Error).message });
+    }
+  };
+
   const handleAddManual = () => {
     if (!manualForm.name.trim()) return;
     const contact: Contact = {
@@ -133,6 +169,8 @@ export default function ImportPage({ onStart }: Props) {
     setManualForm({ name: '', phone: '', email: '' });
   };
 
+  // ── Resume ────────────────────────────────────────────────────────────────
+
   const handleResume = async () => {
     if (!user || !resumeInfo) return;
     setIsStarting(true);
@@ -146,93 +184,103 @@ export default function ImportPage({ onStart }: Props) {
     }
   };
 
-  const handleStart = async () => {
+  // ── Save to Sheets (separate from Start) ──────────────────────────────────
+
+  const handleSave = async () => {
     if (!user || allContacts.length === 0) return;
-    setIsStarting(true);
+    setIsSaving(true);
+    setSaveError(null);
     try {
-      // Create new spreadsheet and initialize it
       resetSession();
       const sheetId = await createSpreadsheet(user.accessToken, user.email);
       await initContactsTab(user.accessToken, sheetId, allContacts);
       setSpreadsheetId(sheetId);
-      initSession(allContacts);
-      onStart();
+      setSavedCount(allContacts.length);
     } catch (e) {
-      console.error('Failed to initialize spreadsheet:', e);
-      // Start anyway with local session only
-      initSession(allContacts);
-      onStart();
+      setSaveError('שגיאה בשמירה ל-Google Sheets. נסה שוב.');
+      console.error(e);
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // ── Start sorting ─────────────────────────────────────────────────────────
+
+  const handleStart = () => {
+    if (allContacts.length === 0) return;
+    setIsStarting(true);
+    initSession(allContacts);
+    onStart();
+  };
+
   const totalContacts = allContacts.length;
+  const isSaved = savedCount !== null;
 
   return (
     <div className="min-h-screen flex flex-col" dir="rtl">
       <Header />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
+
         {/* Resume banner */}
         <AnimatePresence>
           {!checkingResume && resumeInfo && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              exit={{ opacity: 0, y: -16 }}
               className="glass rounded-2xl p-4 mb-4 border-2 border-[#FF2D78]/30"
             >
-              <p className="font-bold text-gray-800 text-sm mb-1">
-                🔄 נמצאה סשן קיימת!
+              <p className="font-bold text-gray-800 text-sm mb-0.5">נמצאה סשן קיימת</p>
+              <p className="text-gray-500 text-xs mb-3">
+                נותרו {resumeInfo.pending} אנשי קשר ממיון קודם — ממשיך מהמקום שעצרת.
               </p>
-              <p className="text-gray-600 text-xs mb-3">
-                נותרו {resumeInfo.pending} אנשי קשר ממיון קודם.
-              </p>
-              <button
+              <motion.button
+                whileTap={{ scale: 0.97 }}
                 onClick={handleResume}
                 disabled={isStarting}
-                className="w-full gradient-pink text-white font-bold py-2 rounded-xl text-sm"
+                className="w-full gradient-pink text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
               >
                 המשך מהמקום שעצרת
-              </button>
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <h2 className="text-white font-bold text-xl mb-4">
-          ייבוא אנשי קשר
-        </h2>
+        <h2 className="text-white font-bold text-xl mb-4">ייבוא אנשי קשר</h2>
 
         {/* Source cards */}
         <div className="space-y-3 mb-6">
+
           {/* Google */}
           <SourceCard
-            icon="🟢"
+            color={SOURCE_COLOR.google}
             title="Google Contacts"
             description="ייבוא כל אנשי הקשר מחשבון Google שלך"
             status={sources.google.status}
             count={sources.google.count}
             error={sources.google.error}
             onAction={handleGoogle}
-            actionLabel="ייבא מ-Google"
+            actionLabel="ייבא"
           />
 
           {/* Facebook */}
           <SourceCard
-            icon="🔵"
+            color={SOURCE_COLOR.facebook}
             title="Facebook"
             description="ייבוא חברים משותפים מפייסבוק (רק חברים שאישרו את האפליקציה)"
             status={sources.facebook.status}
             count={sources.facebook.count}
             error={sources.facebook.error}
             onAction={handleFacebook}
-            actionLabel="התחבר ל-Facebook"
+            actionLabel="התחבר"
           />
 
           {/* Instagram */}
           <SourceCard
-            icon="🟣"
+            color={SOURCE_COLOR.instagram}
             title="Instagram"
-            description="ייבוא מקובץ ייצוא נתונים של אינסטגרם (followers_1.json)"
+            description="ייבוא מקובץ JSON של אינסטגרם (followers_1.json)"
             status={sources.instagram.status}
             count={sources.instagram.count}
             error={sources.instagram.error}
@@ -248,12 +296,46 @@ export default function ImportPage({ onStart }: Props) {
             />
             {sources.instagram.status === 'idle' && (
               <details className="text-xs text-gray-500 mt-2">
-                <summary className="cursor-pointer text-[#FF2D78]">איך מייצאים נתונים מאינסטגרם?</summary>
-                <ol className="mt-2 space-y-1 list-decimal list-inside">
-                  <li>הגדרות {'>'} פרטיות {'>'} הורד את הנתונים שלך</li>
-                  <li>בחר פורמט JSON</li>
-                  <li>בחר "עוקבים ועוקבים" ולחץ בקש הורדה</li>
-                  <li>כשהקובץ מגיע במייל, פתח את followers_1.json</li>
+                <summary className="cursor-pointer text-[#FF2D78] font-medium">
+                  איך מייצאים נתונים מאינסטגרם?
+                </summary>
+                <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
+                  <li>הגדרות → פרטיות → הורד את הנתונים שלך</li>
+                  <li>בחר פורמט JSON ובקש הורדה</li>
+                  <li>פתח את הקובץ followers_1.json מהארכיון שיגיע למייל</li>
+                </ol>
+              </details>
+            )}
+          </SourceCard>
+
+          {/* Phone / vCard */}
+          <SourceCard
+            color={SOURCE_COLOR.phone}
+            title="אנשי קשר מהטלפון"
+            description="ייבוא מקובץ vCard (.vcf) — מתאים למשתמשי iPhone שאינם מסנכרנים עם Google"
+            status={sources.phone.status}
+            count={sources.phone.count}
+            error={sources.phone.error}
+            onAction={() => vcardInputRef.current?.click()}
+            actionLabel="בחר .vcf"
+          >
+            <input
+              ref={vcardInputRef}
+              type="file"
+              accept=".vcf,.vcard"
+              className="hidden"
+              onChange={handleVCardFile}
+            />
+            {sources.phone.status === 'idle' && (
+              <details className="text-xs text-gray-500 mt-2">
+                <summary className="cursor-pointer text-[#FF2D78] font-medium">
+                  איך מייצאים מ-iPhone?
+                </summary>
+                <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
+                  <li>פתח את אפליקציית אנשי הקשר</li>
+                  <li>לחץ על הגדרות (⚙) → ייצוא אנשי קשר</li>
+                  <li>בחר "כל אנשי הקשר" → שתף → שמור לקבצים</li>
+                  <li>העלה את קובץ ה-.vcf כאן</li>
                 </ol>
               </details>
             )}
@@ -262,8 +344,8 @@ export default function ImportPage({ onStart }: Props) {
           {/* Manual */}
           <div className="glass rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">✍️</span>
+              <div className="flex items-center gap-2.5">
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${SOURCE_COLOR.manual}`} />
                 <div>
                   <h3 className="font-bold text-gray-800 text-sm">הוספה ידנית</h3>
                   {sources.manual.count > 0 && (
@@ -323,37 +405,84 @@ export default function ImportPage({ onStart }: Props) {
           </div>
         </div>
 
-        {/* Start button */}
-        {totalContacts > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="glass rounded-2xl p-4 mb-4 text-center">
-              <p className="text-2xl font-black text-gray-800">{totalContacts}</p>
-              <p className="text-gray-500 text-sm">אנשי קשר מוכנים למיון</p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleStart}
-              disabled={isStarting}
-              className="w-full gradient-pink text-white font-black py-4 rounded-2xl text-lg shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+        {/* Bottom action area */}
+        <AnimatePresence>
+          {totalContacts > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
             >
-              {isStarting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  מכין...
-                </>
+              {/* Contact count */}
+              <div className="glass rounded-2xl p-4 mb-4 text-center">
+                <p className="text-2xl font-black text-gray-800">{totalContacts}</p>
+                <p className="text-gray-500 text-sm">אנשי קשר מוכנים למיון</p>
+              </div>
+
+              {/* Save state */}
+              {isSaved ? (
+                /* Already saved — show confirmation and Start button */
+                <div className="space-y-3">
+                  <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-green-200">
+                    <span className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                      <svg viewBox="0 0 12 12" className="w-3 h-3 text-white fill-none stroke-white stroke-2">
+                        <polyline points="2,6 5,9 10,3" />
+                      </svg>
+                    </span>
+                    <p className="text-green-700 text-sm font-medium">
+                      {savedCount} אנשי קשר נשמרו ב-Google Sheets — כל שינוי יתעדכן אוטומטית
+                    </p>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleStart}
+                    disabled={isStarting}
+                    className="w-full gradient-pink text-white font-black py-4 rounded-2xl text-lg shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {isStarting ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : 'התחל מיון'}
+                  </motion.button>
+                </div>
               ) : (
-                <>התחל מיון ❤️</>
+                /* Not saved yet — primary: Save, secondary: Start without saving */
+                <div className="space-y-2">
+                  {saveError && (
+                    <p className="text-red-500 text-sm text-center">{saveError}</p>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSave}
+                    disabled={isSaving || !user}
+                    className="w-full gradient-pink text-white font-black py-4 rounded-2xl text-base shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        שומר ל-Google Sheets...
+                      </>
+                    ) : 'שמור ל-Google Sheets והתחל'}
+                  </motion.button>
+
+                  <button
+                    onClick={handleStart}
+                    disabled={isStarting}
+                    className="w-full glass text-gray-600 font-bold py-3 rounded-2xl text-sm hover:bg-white/70 transition-all disabled:opacity-60"
+                  >
+                    התחל ללא שמירה
+                  </button>
+                </div>
               )}
-            </motion.button>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {totalContacts === 0 && !checkingResume && (
-          <p className="text-white/70 text-center text-sm">
+          <p className="text-white/70 text-center text-sm mt-4">
             ייבא לפחות מקור אחד כדי להתחיל
           </p>
         )}
@@ -362,10 +491,10 @@ export default function ImportPage({ onStart }: Props) {
   );
 }
 
-// ─── SourceCard helper component ─────────────────────────────────────────────
+// ─── SourceCard ────────────────────────────────────────────────────────────────
 
 interface SourceCardProps {
-  icon: string;
+  color: string;
   title: string;
   description: string;
   status: Status;
@@ -376,17 +505,17 @@ interface SourceCardProps {
   children?: React.ReactNode;
 }
 
-function SourceCard({ icon, title, description, status, count, error, onAction, actionLabel, children }: SourceCardProps) {
+function SourceCard({ color, title, description, status, count, error, onAction, actionLabel, children }: SourceCardProps) {
   return (
     <div className="glass rounded-2xl p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xl">{icon}</span>
+          <div className="flex items-center gap-2.5 mb-1">
+            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`} />
             <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
             {status === 'done' && (
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                ✓ {count}
+                {count}
               </span>
             )}
           </div>
@@ -394,6 +523,7 @@ function SourceCard({ icon, title, description, status, count, error, onAction, 
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
           {children}
         </div>
+
         <button
           onClick={onAction}
           disabled={status === 'loading' || status === 'done'}
@@ -401,8 +531,6 @@ function SourceCard({ icon, title, description, status, count, error, onAction, 
             flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all
             ${status === 'done'
               ? 'bg-green-100 text-green-700'
-              : status === 'error'
-              ? 'gradient-pink text-white'
               : 'gradient-pink text-white'}
             disabled:opacity-60
           `}
@@ -410,7 +538,7 @@ function SourceCard({ icon, title, description, status, count, error, onAction, 
           {status === 'loading' ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : status === 'done' ? (
-            '✓'
+            'יובא'
           ) : (
             actionLabel
           )}

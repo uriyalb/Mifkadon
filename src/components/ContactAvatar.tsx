@@ -24,10 +24,11 @@ const AVATAR_COLORS = [
 ];
 
 const SOURCE_BADGE: Record<string, string> = {
-  google: '🟢',
-  facebook: '🔵',
-  instagram: '🟣',
-  manual: '⚪',
+  google: 'bg-green-400',
+  facebook: 'bg-blue-500',
+  instagram: 'bg-purple-500',
+  manual: 'bg-gray-300',
+  phone: 'bg-teal-400',
 };
 
 function getInitials(name: string): string {
@@ -64,9 +65,9 @@ export default function ContactAvatar({ name, photoUrl, size = 'lg', source }: P
         </div>
       )}
       {source && (
-        <span className="absolute -bottom-1 -right-1 text-xs leading-none">
-          {SOURCE_BADGE[source] ?? '⚪'}
-        </span>
+        <span
+          className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${SOURCE_BADGE[source] ?? 'bg-gray-300'}`}
+        />
       )}
     </div>
   );
