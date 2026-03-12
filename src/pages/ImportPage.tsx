@@ -269,7 +269,7 @@ export default function ImportPage({ onStart }: Props) {
   const isSaved = savedCount !== null;
 
   return (
-    <div className="min-h-screen flex flex-col" dir="rtl">
+    <div className="h-[100dvh] flex flex-col" dir="rtl">
       <Header />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
