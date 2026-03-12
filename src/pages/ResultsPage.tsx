@@ -55,7 +55,7 @@ export default function ResultsPage({ onReset }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" dir="rtl">
+    <div className="h-[100dvh] flex flex-col" dir="rtl">
       <Header title="התוצאות" />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">

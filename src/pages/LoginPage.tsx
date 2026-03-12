@@ -50,7 +50,7 @@ export default function LoginPage({ onLogin }: Props) {
   });
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6" dir="rtl">
+    <div className="h-[100dvh] flex flex-col items-center justify-center p-6" dir="rtl">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
