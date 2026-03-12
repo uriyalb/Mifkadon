@@ -169,8 +169,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               className="flex-none w-14 h-14 rounded-2xl glass border border-white/20 flex items-center justify-center text-white/80 text-xl font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-white/10 active:enabled:scale-95"
               title="בטל (↑)"
             >
-              ↩
-            </button>
+              בטל
+</button>
 
             {/* Skip */}
             <button
@@ -198,7 +198,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             onClick={onBack}
             className="text-white/40 text-xs hover:text-white/70 transition-colors pb-safe-bottom pb-2"
           >
-            ← חזור לייבוא
+            חזור לייבוא
           </button>
         </div>
       )}

@@ -12,6 +12,8 @@ import {
   createSpreadsheet,
   initContactsTab,
   loadPendingContacts,
+  loadAllContactRows,
+  appendContactsToSheet,
 } from '../services/googleSheets';
 import Header from '../components/Header';
 
@@ -35,6 +37,13 @@ interface ManualContact {
 }
 
 const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID as string;
+
+function normalizePhone(p: string): string {
+  const d = p.replace(/\D/g, '');
+  if (d.startsWith('972')) return d.slice(3);
+  if (d.startsWith('0')) return d.slice(1);
+  return d;
+}
 
 // Colour dot per source (no emojis)
 const SOURCE_COLOR: Record<SourceKey, string> = {
@@ -91,10 +100,19 @@ export default function ImportPage({ onStart }: Props) {
 
   const addContacts = (newContacts: Contact[]) => {
     setAllContacts((prev) => {
-      const existing = new Set(prev.map((c) => c.id));
-      return [...prev, ...newContacts.filter((c) => !existing.has(c.id))];
+      const ids = new Set(prev.map((c) => c.id));
+      const phones = new Set(prev.filter((c) => c.phone).map((c) => normalizePhone(c.phone!)));
+      const emails = new Set(prev.filter((c) => c.email).map((c) => c.email!.toLowerCase()));
+      return [
+        ...prev,
+        ...newContacts.filter(
+          (c) =>
+            !ids.has(c.id) &&
+            !(c.phone && phones.has(normalizePhone(c.phone))) &&
+            !(c.email && emails.has(c.email.toLowerCase()))
+        ),
+      ];
     });
-    // Any new import invalidates a previous save
     setSavedCount(null);
     setSaveError(null);
   };
@@ -191,14 +209,41 @@ export default function ImportPage({ onStart }: Props) {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const sheetId = await createSpreadsheet(user.accessToken, user.email);
-      await initContactsTab(user.accessToken, sheetId, allContacts);
-      resetSession(); // clear only after success so we don't lose state on failure
-      setSpreadsheetId(sheetId);
-      setSavedCount(allContacts.length);
+      const existingId = await findExistingSpreadsheet(user.accessToken, user.email);
+      if (existingId) {
+        // Merge: append only contacts not already in the sheet
+        const existingRows = await loadAllContactRows(user.accessToken, existingId);
+        const existingIds = new Set(existingRows.map((r) => r.id));
+        const existingPhones = new Set(
+          existingRows.filter((r) => r.phone).map((r) => normalizePhone(r.phone!))
+        );
+        const existingEmails = new Set(
+          existingRows.filter((r) => r.email).map((r) => r.email!.toLowerCase())
+        );
+        const toAppend = allContacts.filter(
+          (c) =>
+            !existingIds.has(c.id) &&
+            !(c.phone && existingPhones.has(normalizePhone(c.phone))) &&
+            !(c.email && existingEmails.has(c.email.toLowerCase()))
+        );
+        if (toAppend.length > 0) {
+          await appendContactsToSheet(user.accessToken, existingId, toAppend);
+        }
+        // Reload full pending list so session includes existing + new
+        const allPending = await loadPendingContacts(user.accessToken, existingId);
+        setAllContacts(allPending);
+        resetSession();
+        setSpreadsheetId(existingId);
+        setSavedCount(allPending.length);
+      } else {
+        const sheetId = await createSpreadsheet(user.accessToken, user.email);
+        await initContactsTab(user.accessToken, sheetId, allContacts);
+        resetSession();
+        setSpreadsheetId(sheetId);
+        setSavedCount(allContacts.length);
+      }
     } catch (e) {
       const msg = (e as Error).message ?? '';
-      // Surface the real API error; detect the most common misconfiguration
       if (msg.includes('has not been used') || msg.includes('is disabled') || msg.includes('SERVICE_DISABLED')) {
         setSaveError('ה-API של Google Sheets או Drive אינו מופעל בפרויקט Google Cloud שלך. עקוב אחר ההוראות למטה.');
       } else if (msg.includes('insufficient') || msg.includes('PERMISSION_DENIED')) {
@@ -238,7 +283,7 @@ export default function ImportPage({ onStart }: Props) {
               exit={{ opacity: 0, y: -16 }}
               className="glass rounded-2xl p-4 mb-4 border-2 border-[#FF2D78]/30"
             >
-              <p className="font-bold text-gray-800 text-sm mb-0.5">נמצאה סשן קיימת</p>
+              <p className="font-bold text-gray-800 text-sm mb-0.5">נמצא סשן קיים</p>
               <p className="text-gray-500 text-xs mb-3">
                 נותרו {resumeInfo.pending} אנשי קשר ממיון קודם — ממשיך מהמקום שעצרת.
               </p>
