@@ -43,7 +43,7 @@ export async function createSpreadsheet(
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      properties: { title, locale: 'he', timeZone: 'Asia/Jerusalem' },
+      properties: { title, locale: 'iw_IL', timeZone: 'Asia/Jerusalem' },
       sheets: [
         { properties: { sheetId: 0, title: TAB1, index: 0 } },
         { properties: { sheetId: 1, title: TAB2, index: 1 } },
@@ -236,6 +236,20 @@ export async function syncApprovedTab(
       ],
     }),
   }).catch(() => {});
+}
+
+// ─── Reset a contact's row back to pending (undo swipe) ──────────────────────
+export function clearContactRow(
+  accessToken: string,
+  spreadsheetId: string,
+  rowIndex: number // same 1-based index as updateContactRow
+): void {
+  const range = `${TAB1_ENC}!F${rowIndex + 1}:H${rowIndex + 1}`;
+  fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [['ממתין', '', '']] }),
+  }).catch(() => { /* non-fatal */ });
 }
 
 export function getSpreadsheetUrl(spreadsheetId: string): string {

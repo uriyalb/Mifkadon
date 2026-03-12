@@ -9,6 +9,7 @@ interface SessionContextType {
   initSession: (contacts: Contact[]) => void;
   swipeRight: (contact: Contact, priority: Priority) => void;
   swipeLeft: (contact: Contact) => void;
+  undoSwipe: (contact: Contact, direction: 'right' | 'left') => void;
   setSpreadsheetId: (id: string) => void;
   resetSession: () => void;
 }
@@ -75,6 +76,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const undoSwipe = (contact: Contact, direction: 'right' | 'left') => {
+    if (!session) return;
+    if (direction === 'right') {
+      persist({
+        ...session,
+        selected: session.selected.filter((c) => c.id !== contact.id),
+        currentIndex: session.currentIndex - 1,
+      });
+    } else {
+      persist({
+        ...session,
+        dismissed: session.dismissed.filter((id) => id !== contact.id),
+        currentIndex: session.currentIndex - 1,
+      });
+    }
+  };
+
   const setSpreadsheetId = (id: string) => {
     sessionStorage.setItem(SPREADSHEET_KEY, id);
     setSpreadsheetIdState(id);
@@ -89,7 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ session, spreadsheetId, initSession, swipeRight, swipeLeft, setSpreadsheetId, resetSession }}
+      value={{ session, spreadsheetId, initSession, swipeRight, swipeLeft, undoSwipe, setSpreadsheetId, resetSession }}
     >
       {children}
     </SessionContext.Provider>
