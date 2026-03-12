@@ -135,7 +135,7 @@ export async function loadPendingContacts(
   accessToken: string,
   spreadsheetId: string
 ): Promise<Contact[]> {
-  const range = `${TAB1_ENC}!A2:H1000`;
+  const range = `${TAB1_ENC}!A2:H10000`;
   const resp = await fetch(
     `${SHEETS_API}/${spreadsheetId}/values/${range}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -153,6 +153,46 @@ export async function loadPendingContacts(
       email: row[3] || undefined,
       source: (row[4] ?? 'manual') as Contact['source'],
     }));
+}
+
+// ─── Load ALL rows from Tab 1 (for dedup check before merge) ────────────────
+export async function loadAllContactRows(
+  accessToken: string,
+  spreadsheetId: string
+): Promise<Array<{ id: string; phone?: string; email?: string }>> {
+  const range = `${TAB1_ENC}!A2:H10000`;
+  const resp = await fetch(
+    `${SHEETS_API}/${spreadsheetId}/values/${range}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  const rows: string[][] = (data.values as string[][]) ?? [];
+  return rows.map((row) => ({
+    id: row[0] ?? '',
+    phone: row[2] || undefined,
+    email: row[3] || undefined,
+  }));
+}
+
+// ─── Append new contacts to the end of Tab 1 ─────────────────────────────────
+export async function appendContactsToSheet(
+  accessToken: string,
+  spreadsheetId: string,
+  contacts: Contact[]
+): Promise<void> {
+  if (contacts.length === 0) return;
+  const rows = contacts.map((c) => [
+    c.id, c.name, c.phone ?? '', c.email ?? '', c.source, 'ממתין', '', '',
+  ]);
+  await fetch(
+    `${SHEETS_API}/${spreadsheetId}/values/${TAB1_ENC}!A:H:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    }
+  );
 }
 
 // ─── Rebuild Tab 2 from approved contacts ────────────────────────────────────

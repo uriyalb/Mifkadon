@@ -38,6 +38,16 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
   // Skip overlay: appears when dragging left
   const skipOpacity = useTransform(dragX, [-140, -60, 0], [1, 0.7, 0]);
 
+  // Commitment feedback: card slightly shrinks once past the swipe threshold
+  const commitScale = useTransform(
+    dragX,
+    [-160, -SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD, 160],
+    [0.92, 0.94, 1, 0.94, 0.92]
+  );
+  // Commitment ring opacities
+  const rightRingOpacity = useTransform(dragX, [SWIPE_THRESHOLD - 20, SWIPE_THRESHOLD + 30], [0, 1]);
+  const leftRingOpacity = useTransform(dragX, [-SWIPE_THRESHOLD - 30, -SWIPE_THRESHOLD + 20], [1, 0]);
+
   const scale = stackIndex === 0 ? 1 : stackIndex === 1 ? 0.95 : 0.9;
   const translateY = stackIndex === 0 ? 0 : stackIndex === 1 ? 12 : 22;
 
@@ -84,11 +94,26 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
         drag={isTop}
         dragElastic={0.7}
         dragMomentum={false}
-        style={isTop ? { x: dragX, y: dragY, rotate } : {}}
+        style={isTop ? { x: dragX, y: dragY, rotate, scale: commitScale } : {}}
         onDragEnd={handleDragEnd}
         className="w-[340px] max-w-[90vw] bg-white rounded-3xl card-shadow overflow-hidden cursor-grab active:cursor-grabbing"
         whileTap={isTop ? { cursor: 'grabbing' } : {}}
       >
+        {/* Commitment ring — pink (keep) */}
+        {isTop && (
+          <motion.div
+            style={{ opacity: rightRingOpacity }}
+            className="absolute inset-0 rounded-3xl ring-4 ring-[#FF2D78] pointer-events-none z-10"
+          />
+        )}
+        {/* Commitment ring — red (skip) */}
+        {isTop && (
+          <motion.div
+            style={{ opacity: leftRingOpacity }}
+            className="absolute inset-0 rounded-3xl ring-4 ring-[#EF4444] pointer-events-none z-10"
+          />
+        )}
+
         {/* Keep overlay */}
         {isTop && (
           <motion.div
