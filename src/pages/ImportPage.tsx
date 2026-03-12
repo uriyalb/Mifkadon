@@ -191,14 +191,21 @@ export default function ImportPage({ onStart }: Props) {
     setIsSaving(true);
     setSaveError(null);
     try {
-      resetSession();
       const sheetId = await createSpreadsheet(user.accessToken, user.email);
       await initContactsTab(user.accessToken, sheetId, allContacts);
+      resetSession(); // clear only after success so we don't lose state on failure
       setSpreadsheetId(sheetId);
       setSavedCount(allContacts.length);
     } catch (e) {
-      setSaveError('שגיאה בשמירה ל-Google Sheets. נסה שוב.');
-      console.error(e);
+      const msg = (e as Error).message ?? '';
+      // Surface the real API error; detect the most common misconfiguration
+      if (msg.includes('has not been used') || msg.includes('is disabled') || msg.includes('SERVICE_DISABLED')) {
+        setSaveError('ה-API של Google Sheets או Drive אינו מופעל בפרויקט Google Cloud שלך. עקוב אחר ההוראות למטה.');
+      } else if (msg.includes('insufficient') || msg.includes('PERMISSION_DENIED')) {
+        setSaveError('חסרות הרשאות. התנתק והתחבר מחדש כדי לאשר את הגישה ל-Google Sheets ו-Drive.');
+      } else {
+        setSaveError(msg || 'שגיאה בשמירה ל-Google Sheets. נסה שוב.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -450,7 +457,18 @@ export default function ImportPage({ onStart }: Props) {
                 /* Not saved yet — primary: Save, secondary: Start without saving */
                 <div className="space-y-2">
                   {saveError && (
-                    <p className="text-red-500 text-sm text-center">{saveError}</p>
+                    <div className="glass rounded-xl p-3 border border-red-200">
+                      <p className="text-red-600 text-sm font-medium mb-1">{saveError}</p>
+                      <details className="text-xs text-gray-500">
+                        <summary className="cursor-pointer text-[#FF2D78] font-medium">בדיקת תצורה נפוצה</summary>
+                        <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
+                          <li>כנס ל-Google Cloud Console ← APIs &amp; Services ← Library</li>
+                          <li>חפש "Google Sheets API" ← Enable</li>
+                          <li>חפש "Google Drive API" ← Enable</li>
+                          <li>חזור לכאן והתחבר מחדש עם Google</li>
+                        </ol>
+                      </details>
+                    </div>
                   )}
 
                   <motion.button
