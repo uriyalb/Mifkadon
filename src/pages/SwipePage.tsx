@@ -17,8 +17,10 @@ interface Props {
 interface LastSwipe {
   contact: Contact;
   direction: 'right' | 'left';
-  rowIndex: number; // 1-based, as expected by updateContactRow / clearContactRow
+  rowIndex: number;
 }
+
+const MAX_HISTORY = 5;
 
 export default function SwipePage({ onFinish, onBack }: Props) {
   const { user } = useAuth();
@@ -29,7 +31,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
   const [remaining, setRemaining] = useState<Contact[]>([]);
   const [showDone, setShowDone] = useState(false);
-  const [lastSwipe, setLastSwipe] = useState<LastSwipe | null>(null);
+  const [swipeHistory, setSwipeHistory] = useState<LastSwipe[]>([]);
 
   useEffect(() => {
     if (session) {
@@ -45,7 +47,6 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const total = session?.contacts.length ?? 0;
   const swiped = total - remaining.length;
 
-  // Row index (1-based, matching updateContactRow convention) for a given contact
   const getRowIndex = useCallback(
     (contact: Contact) => (session?.contacts.findIndex((c) => c.id === contact.id) ?? 0) + 1,
     [session]
@@ -54,7 +55,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const handleSwipeRight = useCallback((contact: Contact, priority: Priority) => {
     const rowIndex = getRowIndex(contact);
     swipeRight(contact, priority);
-    setLastSwipe({ contact, direction: 'right', rowIndex });
+    setSwipeHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), { contact, direction: 'right', rowIndex }]);
     setRemaining((prev) => {
       const next = prev.slice(1);
       if (next.length === 0) setTimeout(() => setShowDone(true), 400);
@@ -68,7 +69,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const handleSwipeLeft = useCallback((contact: Contact) => {
     const rowIndex = getRowIndex(contact);
     swipeLeft(contact);
-    setLastSwipe({ contact, direction: 'left', rowIndex });
+    setSwipeHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), { contact, direction: 'left', rowIndex }]);
     setRemaining((prev) => {
       const next = prev.slice(1);
       if (next.length === 0) setTimeout(() => setShowDone(true), 400);
@@ -80,23 +81,21 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   }, [swipeLeft, getRowIndex, user, spreadsheetId]);
 
   const handleUndo = useCallback(() => {
-    if (!lastSwipe) return;
-    undoSwipe(lastSwipe.contact, lastSwipe.direction);
-    setRemaining((prev) => [lastSwipe.contact, ...prev]);
+    if (swipeHistory.length === 0) return;
+    const last = swipeHistory[swipeHistory.length - 1];
+    setSwipeHistory((prev) => prev.slice(0, -1));
+    undoSwipe(last.contact, last.direction);
+    setRemaining((prev) => [last.contact, ...prev]);
     setShowDone(false);
     if (user && spreadsheetId) {
-      clearContactRow(user.accessToken, spreadsheetId, lastSwipe.rowIndex);
+      clearContactRow(user.accessToken, spreadsheetId, last.rowIndex);
     }
-    setLastSwipe(null);
-  }, [lastSwipe, undoSwipe, user, spreadsheetId]);
+  }, [swipeHistory, undoSwipe, user, spreadsheetId]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') {
-        handleUndo();
-        return;
-      }
+      if (e.key === 'ArrowUp') { handleUndo(); return; }
       if (remaining.length === 0) return;
       const top = remaining[0];
       if (e.key === 'ArrowRight') handleSwipeRight(top, 'medium');
@@ -114,14 +113,14 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   }, [showDone, onFinish]);
 
   const progressBar = <ProgressBar current={swiped} total={total} />;
-
   const canAct = remaining.length > 0 && !showDone;
+  const canUndo = swipeHistory.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-[100dvh] overflow-hidden flex flex-col">
       <Header showProgress={progressBar} />
 
-      <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-4">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative overflow-hidden px-4">
         <div className="relative w-[340px] max-w-[90vw]">
           <PriorityZones dragX={dragX} dragY={dragY} />
 
@@ -131,7 +130,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
                 key="done"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center h-[520px] text-center"
+                className="flex flex-col items-center justify-center h-[min(520px,calc(100svh-180px))] text-center"
               >
                 <motion.div
                   animate={{ scale: [0.8, 1.15, 1] }}
@@ -160,23 +159,23 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
       {/* Action buttons */}
       {!showDone && (
-        <div className="px-4 pb-2 flex flex-col items-center gap-3">
+        <div className="shrink-0 px-4 pb-2 flex flex-col items-center gap-3">
           <div className="flex items-center gap-3 w-full max-w-[340px]">
-            {/* Undo */}
+            {/* Undo / back up to 5 */}
             <button
               onClick={handleUndo}
-              disabled={!lastSwipe}
-              className="flex-none w-14 h-14 rounded-2xl glass border border-white/20 flex items-center justify-center text-white/80 text-xl font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-white/10 active:enabled:scale-95"
-              title="בטל (↑)"
+              disabled={!canUndo}
+              className="flex-none w-16 h-14 rounded-2xl glass border border-white/40 flex items-center justify-center text-white text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-white/15 active:enabled:scale-95"
+              title="חזור (↑)"
             >
-              בטל
-</button>
+              {swipeHistory.length > 1 ? `חזור (${swipeHistory.length})` : 'חזור'}
+            </button>
 
             {/* Skip */}
             <button
               onClick={() => canAct && handleSwipeLeft(remaining[0])}
               disabled={!canAct}
-              className="flex-1 h-14 rounded-2xl border-2 border-red-400/60 text-red-300 font-bold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-red-500/10 active:enabled:scale-95"
+              className="flex-1 h-14 rounded-2xl bg-red-500/30 border-2 border-red-400 text-red-100 font-bold text-lg flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-red-500/50 active:enabled:scale-95"
             >
               <span className="text-xl leading-none">✕</span>
               <span>דלג</span>

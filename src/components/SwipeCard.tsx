@@ -13,7 +13,7 @@ interface Props {
   stackIndex: number; // 0 = top (draggable), 1 = behind, 2 = further
 }
 
-const SWIPE_THRESHOLD = 120;
+const SWIPE_THRESHOLD = 80;
 const PRIORITY_THRESHOLD = 80;
 
 function getPriority(y: number): Priority {
@@ -34,19 +34,19 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
   const rotate = useTransform(dragX, [-300, 0, 300], [-18, 0, 18]);
 
   // Keep overlay: appears when dragging right
-  const keepOpacity = useTransform(dragX, [0, 60, 140], [0, 0.7, 1]);
+  const keepOpacity = useTransform(dragX, [0, 40, 100], [0, 0.7, 1]);
   // Skip overlay: appears when dragging left
-  const skipOpacity = useTransform(dragX, [-140, -60, 0], [1, 0.7, 0]);
+  const skipOpacity = useTransform(dragX, [-100, -40, 0], [1, 0.7, 0]);
 
-  // Commitment feedback: card slightly shrinks once past the swipe threshold
+  // Commitment feedback: card clearly shrinks once past swipe threshold
   const commitScale = useTransform(
     dragX,
-    [-160, -SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD, 160],
-    [0.92, 0.94, 1, 0.94, 0.92]
+    [-170, -SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD, 170],
+    [0.82, 0.88, 1, 0.88, 0.82]
   );
-  // Commitment ring opacities
-  const rightRingOpacity = useTransform(dragX, [SWIPE_THRESHOLD - 20, SWIPE_THRESHOLD + 30], [0, 1]);
-  const leftRingOpacity = useTransform(dragX, [-SWIPE_THRESHOLD - 30, -SWIPE_THRESHOLD + 20], [1, 0]);
+  // Commitment ring opacities — appear right as threshold is crossed
+  const rightRingOpacity = useTransform(dragX, [50, 100], [0, 1]);
+  const leftRingOpacity = useTransform(dragX, [-100, -50], [1, 0]);
 
   const scale = stackIndex === 0 ? 1 : stackIndex === 1 ? 0.95 : 0.9;
   const translateY = stackIndex === 0 ? 0 : stackIndex === 1 ? 12 : 22;
@@ -59,17 +59,16 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
       const priority = getPriority(oy);
       const exitY = priority === 'high' ? -200 : priority === 'low' ? 200 : 0;
       await Promise.all([
-        animate(dragX, 700, { duration: 0.32, ease: 'easeIn' }),
-        animate(dragY, exitY, { duration: 0.32, ease: 'easeIn' }),
+        animate(dragX, 700, { duration: 0.28, ease: 'easeIn' }),
+        animate(dragY, exitY, { duration: 0.28, ease: 'easeIn' }),
       ]);
       onSwipeRight(priority);
-      // Reset for next card
       dragX.set(0);
       dragY.set(0);
     } else if (ox < -SWIPE_THRESHOLD) {
       await Promise.all([
-        animate(dragX, -700, { duration: 0.32, ease: 'easeIn' }),
-        animate(dragY, 0, { duration: 0.32, ease: 'easeIn' }),
+        animate(dragX, -700, { duration: 0.28, ease: 'easeIn' }),
+        animate(dragY, 0, { duration: 0.28, ease: 'easeIn' }),
       ]);
       onSwipeLeft();
       dragX.set(0);
@@ -99,18 +98,24 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
         className="w-[340px] max-w-[90vw] bg-white rounded-3xl card-shadow overflow-hidden cursor-grab active:cursor-grabbing"
         whileTap={isTop ? { cursor: 'grabbing' } : {}}
       >
-        {/* Commitment ring — pink (keep) */}
+        {/* Commitment ring — pink glow (keep) */}
         {isTop && (
           <motion.div
-            style={{ opacity: rightRingOpacity }}
-            className="absolute inset-0 rounded-3xl ring-4 ring-[#FF2D78] pointer-events-none z-10"
+            style={{
+              opacity: rightRingOpacity,
+              boxShadow: '0 0 0 3px #FF2D78, 0 0 20px rgba(255,45,120,0.65), 0 0 44px rgba(255,45,120,0.35)',
+            }}
+            className="absolute inset-0 rounded-3xl pointer-events-none z-10"
           />
         )}
-        {/* Commitment ring — red (skip) */}
+        {/* Commitment ring — red glow (skip) */}
         {isTop && (
           <motion.div
-            style={{ opacity: leftRingOpacity }}
-            className="absolute inset-0 rounded-3xl ring-4 ring-[#EF4444] pointer-events-none z-10"
+            style={{
+              opacity: leftRingOpacity,
+              boxShadow: '0 0 0 3px #EF4444, 0 0 20px rgba(239,68,68,0.65), 0 0 44px rgba(239,68,68,0.35)',
+            }}
+            className="absolute inset-0 rounded-3xl pointer-events-none z-10"
           />
         )}
 

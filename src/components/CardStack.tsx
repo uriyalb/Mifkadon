@@ -16,7 +16,7 @@ export default function CardStack({ contacts, dragX, dragY, onSwipeRight, onSwip
   const visibleCards = contacts.slice(0, 3);
 
   return (
-    <div className="relative w-[340px] max-w-[90vw] h-[520px]">
+    <div className="relative w-[340px] max-w-[90vw] h-[min(520px,calc(100svh-180px))]">
       <AnimatePresence>
         {visibleCards.map((contact, idx) => (
           <SwipeCard
