@@ -266,7 +266,7 @@ export default function ImportPage({ onStart }: Props) {
   const isSaved = savedCount !== null;
 
   return (
-    <div className="h-[100dvh] flex flex-col" dir="rtl">
+    <div className="h-[100dvh] flex flex-col" dir="rtl" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
       <Header />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">

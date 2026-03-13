@@ -3,9 +3,14 @@ import type { ReactNode } from 'react';
 import type { Contact, SelectedContact, SwipeSession, Priority } from '../types/contact';
 import { useAuth } from './AuthContext';
 
+export type SyncStatus = 'idle' | 'syncing' | 'error';
+
 interface SessionContextType {
   session: SwipeSession | null;
   spreadsheetId: string | null;
+  syncStatus: SyncStatus;
+  syncError: string | null;
+  setSyncState: (status: SyncStatus, error?: string) => void;
   initSession: (contacts: Contact[]) => void;
   swipeRight: (contact: Contact, priority: Priority) => void;
   swipeLeft: (contact: Contact) => void;
@@ -34,6 +39,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [spreadsheetId, setSpreadsheetIdState] = useState<string | null>(() => {
     return localStorage.getItem(SPREADSHEET_KEY);
   });
+
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const setSyncState = (status: SyncStatus, error?: string) => {
+    setSyncStatus(status);
+    setSyncError(error ?? null);
+  };
 
   const persist = (s: SwipeSession) => {
     localStorage.setItem(SESSION_DATA_KEY, JSON.stringify(s));
@@ -107,7 +120,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ session, spreadsheetId, initSession, swipeRight, swipeLeft, undoSwipe, setSpreadsheetId, resetSession }}
+      value={{ session, spreadsheetId, syncStatus, syncError, setSyncState, initSession, swipeRight, swipeLeft, undoSwipe, setSpreadsheetId, resetSession }}
     >
       {children}
     </SessionContext.Provider>
