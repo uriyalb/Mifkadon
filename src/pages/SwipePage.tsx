@@ -48,7 +48,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const swiped = total - remaining.length;
 
   const getRowIndex = useCallback(
-    (contact: Contact) => (session?.contacts.findIndex((c) => c.id === contact.id) ?? 0) + 1,
+    // Use sheetRow if present (resume from sheet — the only correct row index).
+    // Fall back to findIndex+1 for fresh imports where contacts are written in-order.
+    (contact: Contact) => contact.sheetRow ?? ((session?.contacts.findIndex((c) => c.id === contact.id) ?? 0) + 1),
     [session]
   );
 

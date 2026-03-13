@@ -144,14 +144,19 @@ export async function loadPendingContacts(
   const data = await resp.json();
   const rows: string[][] = (data.values as string[][]) ?? [];
 
+  // Map with original index BEFORE filtering so sheetRow reflects the real sheet position.
+  // Data row i (0-based) = sheet row i+2 (row 1 is header); updateContactRow uses rowIndex
+  // where range = F${rowIndex+1}, so sheetRow = i+1 gives the correct rowIndex.
   return rows
-    .filter((row) => row[5] === 'ממתין')
-    .map((row) => ({
+    .map((row, i) => ({ row, sheetRow: i + 1 }))
+    .filter(({ row }) => row[5] === 'ממתין')
+    .map(({ row, sheetRow }) => ({
       id: row[0] ?? '',
       name: row[1] ?? '',
       phone: row[2] || undefined,
       email: row[3] || undefined,
       source: (row[4] ?? 'manual') as Contact['source'],
+      sheetRow,
     }));
 }
 

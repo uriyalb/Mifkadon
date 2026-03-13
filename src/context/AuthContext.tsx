@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem(SESSION_KEY);
+      const stored = localStorage.getItem(SESSION_KEY);
       if (stored) {
         const user: GoogleUser = JSON.parse(stored);
         setState({ user, isLoading: false, error: null });
@@ -51,8 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken,
       scopes: [],
     };
-    // sessionStorage only — clears when tab/browser closes
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
     setState({ user, isLoading: false, error: null });
   };
 
@@ -70,9 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
-    sessionStorage.removeItem(SESSION_KEY);
-    sessionStorage.removeItem('mifkadon_session_data');
-    sessionStorage.removeItem('mifkadon_spreadsheet_id');
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('mifkadon_session_data');
+    localStorage.removeItem('mifkadon_spreadsheet_id');
     setDemoMode(false);
     setState({ user: null, isLoading: false, error: null });
   };

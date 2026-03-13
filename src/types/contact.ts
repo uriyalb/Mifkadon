@@ -12,6 +12,8 @@ export interface Contact {
   notes?: string;
   organizationName?: string;
   jobTitle?: string;
+  /** 1-based row index in the Google Sheet (set when loading from sheet) */
+  sheetRow?: number;
 }
 
 export interface SelectedContact extends Contact {
