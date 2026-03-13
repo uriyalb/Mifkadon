@@ -16,15 +16,15 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | null>(null);
 
-const SESSION_DATA_KEY = 'mifkadon_session_data';
-const SPREADSHEET_KEY = 'mifkadon_spreadsheet_id';
+export const SESSION_DATA_KEY = 'mifkadon_session_data';
+export const SPREADSHEET_KEY = 'mifkadon_spreadsheet_id';
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   const [session, setSession] = useState<SwipeSession | null>(() => {
     try {
-      const stored = sessionStorage.getItem(SESSION_DATA_KEY);
+      const stored = localStorage.getItem(SESSION_DATA_KEY);
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -32,11 +32,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
 
   const [spreadsheetId, setSpreadsheetIdState] = useState<string | null>(() => {
-    return sessionStorage.getItem(SPREADSHEET_KEY);
+    return localStorage.getItem(SPREADSHEET_KEY);
   });
 
   const persist = (s: SwipeSession) => {
-    sessionStorage.setItem(SESSION_DATA_KEY, JSON.stringify(s));
+    localStorage.setItem(SESSION_DATA_KEY, JSON.stringify(s));
     setSession(s);
   };
 
@@ -94,13 +94,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   };
 
   const setSpreadsheetId = (id: string) => {
-    sessionStorage.setItem(SPREADSHEET_KEY, id);
+    localStorage.setItem(SPREADSHEET_KEY, id);
     setSpreadsheetIdState(id);
   };
 
   const resetSession = () => {
-    sessionStorage.removeItem(SESSION_DATA_KEY);
-    sessionStorage.removeItem(SPREADSHEET_KEY);
+    localStorage.removeItem(SESSION_DATA_KEY);
+    localStorage.removeItem(SPREADSHEET_KEY);
     setSession(null);
     setSpreadsheetIdState(null);
   };
