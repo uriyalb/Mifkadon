@@ -117,7 +117,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const canUndo = swipeHistory.length > 0;
 
   return (
-    <div className="h-[100dvh] overflow-hidden flex flex-col">
+    <div className="h-[100dvh] overflow-hidden flex flex-col" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
       <Header showProgress={progressBar} />
 
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative overflow-hidden px-4">
@@ -165,7 +165,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             <button
               onClick={handleUndo}
               disabled={!canUndo}
-              className="flex-none w-16 h-14 rounded-2xl glass border border-white/40 flex items-center justify-center text-white text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-white/15 active:enabled:scale-95"
+              className="flex-none w-16 h-14 rounded-2xl glass border border-pink-200 flex items-center justify-center text-[#FF2D78] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-pink-50 active:enabled:scale-95"
               title="חזור (↑)"
             >
               {swipeHistory.length > 1 ? `חזור (${swipeHistory.length})` : 'חזור'}
@@ -195,7 +195,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
           {/* Back link */}
           <button
             onClick={onBack}
-            className="text-white/40 text-xs hover:text-white/70 transition-colors pb-safe-bottom pb-2"
+            className="text-white/70 text-xs hover:text-white transition-colors pb-safe-bottom pb-2"
           >
             חזור לייבוא
           </button>
