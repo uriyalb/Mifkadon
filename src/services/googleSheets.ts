@@ -120,14 +120,14 @@ export function updateContactRow(
   rowIndex: number, // 1-based index of the contact row (row 1 = header → first contact is row 2)
   status: 'אושר' | 'נדחה',
   priority?: string
-): void {
+): Promise<void> {
   const range = `${TAB1_ENC}!F${rowIndex + 1}:H${rowIndex + 1}`;
   const timestamp = new Date().toLocaleString('he-IL');
-  fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
+  return fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ values: [[status, priority ? PRIORITY_LABEL[priority] : '', timestamp]] }),
-  }).catch(() => { /* non-fatal */ });
+  }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); });
 }
 
 // ─── Load pending contacts from an existing Tab 1 ───────────────────────────
@@ -283,13 +283,13 @@ export function clearContactRow(
   accessToken: string,
   spreadsheetId: string,
   rowIndex: number // same 1-based index as updateContactRow
-): void {
+): Promise<void> {
   const range = `${TAB1_ENC}!F${rowIndex + 1}:H${rowIndex + 1}`;
-  fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
+  return fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ values: [['ממתין', '', '']] }),
-  }).catch(() => { /* non-fatal */ });
+  }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); });
 }
 
 export function getSpreadsheetUrl(spreadsheetId: string): string {

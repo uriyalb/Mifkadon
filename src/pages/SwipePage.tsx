@@ -24,7 +24,7 @@ const MAX_HISTORY = 5;
 
 export default function SwipePage({ onFinish, onBack }: Props) {
   const { user } = useAuth();
-  const { session, spreadsheetId, swipeRight, swipeLeft, undoSwipe } = useSession();
+  const { session, spreadsheetId, swipeRight, swipeLeft, undoSwipe, setSyncState } = useSession();
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -62,9 +62,12 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       return next;
     });
     if (user && spreadsheetId) {
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, 'אושר', priority);
+      setSyncState('syncing');
+      updateContactRow(user.accessToken, spreadsheetId, rowIndex, 'אושר', priority)
+        .then(() => setSyncState('idle'))
+        .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeRight, getRowIndex, user, spreadsheetId]);
+  }, [swipeRight, getRowIndex, user, spreadsheetId, setSyncState]);
 
   const handleSwipeLeft = useCallback((contact: Contact) => {
     const rowIndex = getRowIndex(contact);
@@ -76,9 +79,12 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       return next;
     });
     if (user && spreadsheetId) {
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, 'נדחה');
+      setSyncState('syncing');
+      updateContactRow(user.accessToken, spreadsheetId, rowIndex, 'נדחה')
+        .then(() => setSyncState('idle'))
+        .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeLeft, getRowIndex, user, spreadsheetId]);
+  }, [swipeLeft, getRowIndex, user, spreadsheetId, setSyncState]);
 
   const handleUndo = useCallback(() => {
     if (swipeHistory.length === 0) return;
@@ -88,9 +94,12 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     setRemaining((prev) => [last.contact, ...prev]);
     setShowDone(false);
     if (user && spreadsheetId) {
-      clearContactRow(user.accessToken, spreadsheetId, last.rowIndex);
+      setSyncState('syncing');
+      clearContactRow(user.accessToken, spreadsheetId, last.rowIndex)
+        .then(() => setSyncState('idle'))
+        .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeHistory, undoSwipe, user, spreadsheetId]);
+  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState]);
 
   // Keyboard shortcuts
   useEffect(() => {

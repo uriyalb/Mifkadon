@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { SessionProvider, useSession } from './context/SessionContext'
+import { SessionProvider, useSession, SESSION_DATA_KEY } from './context/SessionContext'
 import LoginPage from './pages/LoginPage'
 import ImportPage from './pages/ImportPage'
 import SwipePage from './pages/SwipePage'
@@ -39,7 +39,8 @@ function AppRouter() {
 
   useEffect(() => {
     if (user && page === 'login') {
-      setPage('import')
+      const hasActiveSession = !!localStorage.getItem(SESSION_DATA_KEY);
+      setPage(hasActiveSession ? 'swipe' : 'import')
     }
     if (!user) {
       setPage('login')
