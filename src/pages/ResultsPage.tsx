@@ -12,7 +12,7 @@ interface Props {
 }
 
 const PRIORITY_CONFIG = {
-  high:   { label: 'ניצחון מהיר', bgClass: 'gradient-high',   textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
+  high:   { label: 'טופס בטוח',   bgClass: 'gradient-high',   textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
   medium: { label: 'סיכוי טוב',   bgClass: 'gradient-medium', textColor: 'text-lime-700',   bgLight: 'bg-lime-50',   border: 'border-lime-200' },
   low:    { label: 'דרושה עבודה', bgClass: 'gradient-low',    textColor: 'text-yellow-700', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
 };
@@ -132,7 +132,7 @@ export default function ResultsPage({ onReset }: Props) {
         {/* Tab filter */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           <TabChip label="הכל" count={selected.length} active={activeTab === 'all'} onClick={() => setActiveTab('all')} />
-          <TabChip label="ניצחון מהיר" count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-green-100 text-green-700" />
+          <TabChip label="טופס בטוח" count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-green-100 text-green-700" />
           <TabChip label="סיכוי טוב" count={byPriority.medium.length} active={activeTab === 'medium'} onClick={() => setActiveTab('medium')} color="bg-lime-100 text-lime-700" />
           <TabChip label="דרושה עבודה" count={byPriority.low.length} active={activeTab === 'low'} onClick={() => setActiveTab('low')} color="bg-yellow-100 text-yellow-700" />
         </div>

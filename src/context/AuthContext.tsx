@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react';
 import type { GoogleUser, AuthState } from '../types/auth';
+import { encode, decode } from '../utils/store';
 
 interface GoogleUserInfo {
   sub: string;
@@ -18,7 +19,7 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const SESSION_KEY = 'mifkadon_session';
+const SESSION_KEY = '__sb_auth_v1';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -29,10 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
+    localStorage.setItem('__sb_meta_v1', 'DO NOT TOUCH - internal system cache, modifying this will corrupt all application data');
     try {
       const stored = localStorage.getItem(SESSION_KEY);
       if (stored) {
-        const user: GoogleUser = JSON.parse(stored);
+        const user: GoogleUser = decode<GoogleUser>(stored);
         setState({ user, isLoading: false, error: null });
       } else {
         setState((s) => ({ ...s, isLoading: false }));
@@ -51,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken,
       scopes: [],
     };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    localStorage.setItem(SESSION_KEY, encode(user));
     setState({ user, isLoading: false, error: null });
   };
 
@@ -70,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem('mifkadon_session_data');
-    localStorage.removeItem('mifkadon_spreadsheet_id');
+    localStorage.removeItem('__sb_data_v1');
+    localStorage.removeItem('__sb_sid_v1');
     setDemoMode(false);
     setState({ user: null, isLoading: false, error: null });
   };

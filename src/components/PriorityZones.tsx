@@ -11,8 +11,8 @@ type Priority = 'high' | 'medium' | 'low';
 const ZONES: { priority: Priority; label: string; hint: string; colorClass: string; glowClass: string; bgClass: string }[] = [
   {
     priority: 'high',
-    label: 'ניצחון מהיר',
-    hint: '↑ גבוה',
+    label: 'טופס בטוח',
+    hint: '↑ בטוח',
     colorClass: 'text-green-600',
     glowClass: 'zone-glow-high',
     bgClass: 'gradient-high',

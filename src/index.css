@@ -99,3 +99,8 @@
     box-shadow: 0 0 24px rgba(234, 179, 8, 0.7), 0 0 48px rgba(234, 179, 8, 0.35);
   }
 }
+
+@keyframes ilan-ride {
+  from { background-position: 0% 0%; }
+  to   { background-position: 100% 0%; }
+}

@@ -8,6 +8,7 @@ import CardStack from '../components/CardStack';
 import PriorityZones from '../components/PriorityZones';
 import ProgressBar from '../components/ProgressBar';
 import Header from '../components/Header';
+import { JOURNEY } from '../data/journeyRoute';
 
 interface Props {
   onFinish: () => void;
@@ -24,7 +25,7 @@ const MAX_HISTORY = 5;
 
 export default function SwipePage({ onFinish, onBack }: Props) {
   const { user } = useAuth();
-  const { session, spreadsheetId, swipeRight, swipeLeft, undoSwipe, setSyncState } = useSession();
+  const { session, spreadsheetId, swipeRight, swipeLeft, undoSwipe, setSyncState, currentChapter, chapterSizes } = useSession();
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -46,6 +47,12 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
   const total = session?.contacts.length ?? 0;
   const swiped = total - remaining.length;
+
+  // Chapter-local progress for the progress bar
+  const chapterTotal = chapterSizes[currentChapter] ?? total;
+  const processedBefore = chapterSizes.slice(0, currentChapter).reduce((a, b) => a + b, 0);
+  const chapterSwiped = Math.max(0, Math.min(swiped - processedBefore, chapterTotal));
+  const cityName = JOURNEY[currentChapter + 1]?.name ?? JOURNEY[JOURNEY.length - 1].name;
 
   const getRowIndex = useCallback(
     // Use sheetRow if present (resume from sheet — the only correct row index).
@@ -123,7 +130,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     }
   }, [showDone, onFinish]);
 
-  const progressBar = <ProgressBar current={swiped} total={total} />;
+  const progressBar = <ProgressBar current={chapterSwiped} total={chapterTotal} chapterLabel={cityName} />;
   const canAct = remaining.length > 0 && !showDone;
   const canUndo = swipeHistory.length > 0;
 
