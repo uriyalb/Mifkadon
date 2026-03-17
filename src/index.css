@@ -104,3 +104,27 @@
   from { background-position: 0% 0%; }
   to   { background-position: 100% 0%; }
 }
+
+/* Sprite animation for Ilan_sprite.png (172×48, 4 horizontal frames) */
+@keyframes ilan-ride-sprite {
+  from { background-position: 0% 0%; }
+  to   { background-position: 100% 0%; }
+}
+
+/* Parallax scroll layers — width:200% elements translate -50% to loop seamlessly */
+@keyframes travel-scroll-far {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes travel-scroll-near {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@layer utilities {
+  .pixel-art {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+}
