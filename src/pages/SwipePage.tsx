@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useMotionValue, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
@@ -33,6 +33,15 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const [remaining, setRemaining] = useState<Contact[]>([]);
   const [showDone, setShowDone] = useState(false);
   const [swipeHistory, setSwipeHistory] = useState<LastSwipe[]>([]);
+  // Tracks the 400ms "all done" delay so it can be cancelled if the component
+  // unmounts before the timeout fires (e.g. the user navigates away mid-animation).
+  const showDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (session) {
@@ -67,7 +76,10 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     setSwipeHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), { contact, direction: 'right', rowIndex }]);
     setRemaining((prev) => {
       const next = prev.slice(1);
-      if (next.length === 0) setTimeout(() => setShowDone(true), 400);
+      if (next.length === 0) {
+        if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
+        showDoneTimerRef.current = setTimeout(() => setShowDone(true), 400);
+      }
       return next;
     });
     if (user && spreadsheetId) {
@@ -84,7 +96,10 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     setSwipeHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), { contact, direction: 'left', rowIndex }]);
     setRemaining((prev) => {
       const next = prev.slice(1);
-      if (next.length === 0) setTimeout(() => setShowDone(true), 400);
+      if (next.length === 0) {
+        if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
+        showDoneTimerRef.current = setTimeout(() => setShowDone(true), 400);
+      }
       return next;
     });
     if (user && spreadsheetId) {

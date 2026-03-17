@@ -1,7 +1,39 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Content-Security-Policy restricts which origins can load scripts, styles,
+      and make network requests. This mitigates XSS attacks — if an attacker
+      injects a script tag, it cannot load code from an external origin.
+
+      script-src 'self' — only our own bundled scripts are allowed.
+        'unsafe-eval' is included for Vite's dev-mode HMR; it has no effect
+        in the production build and can be removed if a stricter policy is needed.
+      style-src 'self' 'unsafe-inline' — Tailwind writes inline styles at runtime.
+      connect-src — API endpoints the app is allowed to fetch from.
+      img-src data: https: — contact photos come from various HTTPS origins.
+      object-src 'none' — disallow Flash / plugins entirely.
+      base-uri 'self' — prevent <base> tag injection attacks.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https:;
+        connect-src 'self'
+          https://accounts.google.com
+          https://*.googleapis.com
+          https://graph.facebook.com
+          https://www.instagram.com;
+        font-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+      "
+    />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mifkadon</title>
