@@ -10,6 +10,8 @@
       script-src 'self' — only our own bundled scripts are allowed.
         'unsafe-eval' is included for Vite's dev-mode HMR; it has no effect
         in the production build and can be removed if a stricter policy is needed.
+        accounts.google.com hosts the Google Identity Services SDK loaded by
+        @react-oauth/google for the Google login flow.
       style-src 'self' 'unsafe-inline' — Tailwind writes inline styles at runtime.
       connect-src — API endpoints the app is allowed to fetch from.
       img-src data: https: — contact photos come from various HTTPS origins.
@@ -20,7 +22,7 @@
       http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' 'unsafe-eval';
+        script-src 'self' 'unsafe-eval' https://accounts.google.com;
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: https:;
         connect-src 'self'
@@ -31,6 +33,7 @@
         font-src 'self';
         object-src 'none';
         base-uri 'self';
+        frame-src 'self' https://accounts.google.com;
         form-action 'self';
       "
     />
