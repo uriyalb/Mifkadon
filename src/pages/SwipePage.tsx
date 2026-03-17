@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, useMotionValue, AnimatePresence } from 'framer-motion';
+import { useMotionValue, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { Contact, Priority } from '../types/contact';
 import { updateContactRow, clearContactRow } from '../services/googleSheets';
 import CardStack from '../components/CardStack';
 import PriorityZones from '../components/PriorityZones';
-import ProgressBar from '../components/ProgressBar';
+import TravelScene from '../components/TravelScene';
+import LevelSummaryScreen from '../components/LevelSummaryScreen';
 import Header from '../components/Header';
 import { JOURNEY } from '../data/journeyRoute';
 
@@ -36,6 +37,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   // Tracks the 400ms "all done" delay so it can be cancelled if the component
   // unmounts before the timeout fires (e.g. the user navigates away mid-animation).
   const showDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
+  const [elapsedAtDone, setElapsedAtDone] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -57,11 +60,13 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const total = session?.contacts.length ?? 0;
   const swiped = total - remaining.length;
 
-  // Chapter-local progress for the progress bar
+  // Chapter-local progress for the travel scene
   const chapterTotal = chapterSizes[currentChapter] ?? total;
   const processedBefore = chapterSizes.slice(0, currentChapter).reduce((a, b) => a + b, 0);
   const chapterSwiped = Math.max(0, Math.min(swiped - processedBefore, chapterTotal));
+  const fromCity = JOURNEY[currentChapter]?.name ?? JOURNEY[0].name;
   const cityName = JOURNEY[currentChapter + 1]?.name ?? JOURNEY[JOURNEY.length - 1].name;
+  const scenePct = chapterTotal === 0 ? 0 : Math.round((chapterSwiped / chapterTotal) * 100);
 
   const getRowIndex = useCallback(
     // Use sheetRow if present (resume from sheet — the only correct row index).
@@ -78,7 +83,10 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       const next = prev.slice(1);
       if (next.length === 0) {
         if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
-        showDoneTimerRef.current = setTimeout(() => setShowDone(true), 400);
+        showDoneTimerRef.current = setTimeout(() => {
+          setElapsedAtDone(Math.round((Date.now() - startTimeRef.current) / 1000));
+          setShowDone(true);
+        }, 400);
       }
       return next;
     });
@@ -98,7 +106,10 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       const next = prev.slice(1);
       if (next.length === 0) {
         if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
-        showDoneTimerRef.current = setTimeout(() => setShowDone(true), 400);
+        showDoneTimerRef.current = setTimeout(() => {
+          setElapsedAtDone(Math.round((Date.now() - startTimeRef.current) / 1000));
+          setShowDone(true);
+        }, 400);
       }
       return next;
     });
@@ -138,45 +149,24 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [remaining, handleSwipeRight, handleSwipeLeft, handleUndo]);
 
-  useEffect(() => {
-    if (showDone) {
-      const t = setTimeout(onFinish, 2000);
-      return () => clearTimeout(t);
-    }
-  }, [showDone, onFinish]);
-
-  const progressBar = <ProgressBar current={chapterSwiped} total={chapterTotal} chapterLabel={cityName} />;
   const canAct = remaining.length > 0 && !showDone;
   const canUndo = swipeHistory.length > 0;
 
   return (
     <div className="h-[100dvh] overflow-hidden flex flex-col" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
-      <Header showProgress={progressBar} />
+      <Header />
+
+      {/* Travel scene — pixel art parallax progress indicator */}
+      <div className="shrink-0 px-2">
+        <TravelScene fromCity={fromCity} toCity={cityName} pct={scenePct} />
+      </div>
 
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative overflow-hidden px-4">
         <div className="relative w-[340px] max-w-[90vw]">
           <PriorityZones dragX={dragX} dragY={dragY} />
 
           <AnimatePresence mode="wait">
-            {showDone ? (
-              <motion.div
-                key="done"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center h-[min(520px,calc(100svh-180px))] text-center"
-              >
-                <motion.div
-                  animate={{ scale: [0.8, 1.15, 1] }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
-                  className="w-24 h-24 rounded-full gradient-pink flex items-center justify-center mb-6 shadow-xl"
-                >
-                  <span className="text-white font-black text-5xl leading-none">✓</span>
-                </motion.div>
-                <h2 className="text-3xl font-black text-white mb-2">כל הכבוד!</h2>
-                <p className="text-white/80 text-lg">סיימת למיין את כל אנשי הקשר</p>
-                <p className="text-white/60 text-sm mt-2">עובר לתוצאות...</p>
-              </motion.div>
-            ) : remaining.length > 0 ? (
+            {remaining.length > 0 ? (
               <CardStack
                 key="stack"
                 contacts={remaining}
@@ -189,6 +179,20 @@ export default function SwipePage({ onFinish, onBack }: Props) {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Level summary overlay */}
+      <AnimatePresence>
+        {showDone && (
+          <LevelSummaryScreen
+            chapterIndex={currentChapter}
+            arrivedCity={cityName}
+            flavorText={JOURNEY[currentChapter + 1]?.flavor ?? ''}
+            contactsSorted={chapterSwiped}
+            secondsElapsed={elapsedAtDone}
+            onNext={onFinish}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Action buttons */}
       {!showDone && (
