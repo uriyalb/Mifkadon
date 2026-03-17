@@ -28,4 +28,6 @@ export interface SwipeSession {
   selected: SelectedContact[];
   dismissed: string[]; // contact IDs
   currentIndex: number;
+  chapterSizes: number[];   // contacts per chapter (8 chapters, increasing size)
+  currentChapter: number;   // 0-indexed chapter the user is currently in
 }
