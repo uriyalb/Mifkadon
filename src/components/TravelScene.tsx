@@ -13,9 +13,9 @@ export default function TravelScene({ fromCity, toCity, pct }: Props) {
   const clampedPct = Math.max(0, Math.min(100, pct));
 
   return (
-    <div className="w-full select-none" style={{ height: 150 }}>
-      {/* City labels row */}
-      <div className="flex items-center justify-between px-3 pb-1" dir="rtl">
+    <div className="w-full select-none" dir="ltr" style={{ height: 150 }}>
+      {/* City labels row — LTR so progress goes left→right matching the character */}
+      <div className="flex items-center justify-between px-3 pb-1">
         <span className="text-[11px] font-bold text-white/90 drop-shadow-sm">{fromCity}</span>
         <span className="text-[10px] font-semibold text-white/50">{clampedPct}%</span>
         <span className="text-[11px] font-bold text-amber-300/90 drop-shadow-sm">{toCity}</span>
@@ -93,7 +93,7 @@ export default function TravelScene({ fromCity, toCity, pct }: Props) {
           />
         </div>
 
-        {/* Character sprite */}
+        {/* Character sprite — 2×2 grid (172×192, each frame 86×96) */}
         <div
           className="absolute z-10"
           style={{
@@ -103,9 +103,9 @@ export default function TravelScene({ fromCity, toCity, pct }: Props) {
             left: `clamp(4px, calc(${clampedPct}% - 43px), calc(100% - 90px))`,
             transition: 'left 300ms ease-out',
             backgroundImage: 'url(/Ilan_sprite.png)',
-            backgroundSize: '400% 100%',
+            backgroundSize: '200% 200%',
             backgroundRepeat: 'no-repeat',
-            animation: 'ilan-ride-sprite 0.667s steps(4) infinite',
+            animation: 'ilan-ride-sprite 0.667s steps(1) infinite',
             imageRendering: 'pixelated',
             filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
           }}

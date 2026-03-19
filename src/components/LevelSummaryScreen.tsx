@@ -119,12 +119,12 @@ export default function LevelSummaryScreen({
           width: 86,
           height: 96,
           backgroundImage: 'url(/Ilan_sprite.png)',
-          backgroundSize: '400% 100%',
+          backgroundSize: '200% 200%',
           backgroundPosition: '0% 0%',
           backgroundRepeat: 'no-repeat',
           imageRendering: 'pixelated',
           filter: 'drop-shadow(0 4px 12px rgba(255, 107, 53, 0.4))',
-          animation: 'ilan-ride-sprite 0.667s steps(4) infinite',
+          animation: 'ilan-ride-sprite 0.667s steps(1) infinite',
         }}
       />
 
