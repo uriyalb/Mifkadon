@@ -59,7 +59,7 @@ export default function PriorityZones({ dragX, dragY }: Props) {
 
   return (
     <motion.div
-      className="absolute right-0 top-0 bottom-0 flex flex-col justify-between py-4 pointer-events-none z-30"
+      className="absolute right-0 top-0 bottom-0 flex flex-col justify-between py-4 pointer-events-none z-40"
       initial={{ x: 150, opacity: 0 }}
       animate={{ x: isVisible ? -16 : 150, opacity: isVisible ? 1 : 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 30 }}

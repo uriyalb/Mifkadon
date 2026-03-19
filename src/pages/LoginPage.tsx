@@ -47,6 +47,10 @@ export default function LoginPage({ onLogin }: Props) {
       setError('ההתחברות נכשלה. נסה שוב.');
       setIsLoading(false);
     },
+    onNonOAuthError: () => {
+      setError('חלון ההתחברות נחסם או נסגר. נסה שוב.');
+      setIsLoading(false);
+    },
   });
 
   return (
@@ -98,7 +102,11 @@ export default function LoginPage({ onLogin }: Props) {
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => { setIsLoading(true); login(); }}
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            try { login(); } catch { setError('שגיאה בפתיחת חלון ההתחברות.'); setIsLoading(false); }
+          }}
           disabled={isLoading}
           className="w-full bg-white text-gray-700 font-bold py-4 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-3 text-base disabled:opacity-60 transition-all"
         >
