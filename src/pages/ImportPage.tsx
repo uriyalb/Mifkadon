@@ -235,11 +235,13 @@ export default function ImportPage({ onStart }: Props) {
           await appendContactsToSheet(user.accessToken, existingId, toAppend);
         }
         await protectProgressColumns(user.accessToken, existingId);
-        // Reload full contact list so session includes existing + new
+        // Reload full contact list so session includes existing + new.
+        // Use restoreSession to preserve chapter progress — completed chapters
+        // keep their sizes, new contacts redistribute across remaining chapters.
         const sheetData = await loadAllContactsWithStatus(user.accessToken, existingId);
         setAllContacts(sheetData.pending);
-        resetSession();
         setSpreadsheetId(existingId);
+        restoreSession(sheetData);
         setSavedCount(sheetData.allContacts.length);
       } else {
         const sheetId = await createSpreadsheet(user.accessToken, user.email);
