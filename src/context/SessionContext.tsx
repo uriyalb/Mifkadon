@@ -3,8 +3,20 @@ import type { ReactNode } from 'react';
 import type { Contact, SelectedContact, SwipeSession, Priority } from '../types/contact';
 import { useAuth } from './AuthContext';
 import { encode, decode, encodeString, decodeString } from '../utils/store';
+import {
+  computeChapterSizes,
+  computeCurrentChapter,
+  redistributeChapters,
+} from '../config/chapters';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error';
+
+export interface RestoreData {
+  allContacts: Contact[];
+  selected: SelectedContact[];
+  dismissedIds: string[];
+  pending: Contact[];
+}
 
 interface SessionContextType {
   session: SwipeSession | null;
@@ -15,6 +27,8 @@ interface SessionContextType {
   chapterSizes: number[];
   setSyncState: (status: SyncStatus, error?: string) => void;
   initSession: (contacts: Contact[]) => void;
+  restoreSession: (data: RestoreData) => void;
+  expandSession: (newContacts: Contact[]) => void;
   swipeRight: (contact: Contact, priority: Priority) => void;
   swipeLeft: (contact: Contact) => void;
   undoSwipe: (contact: Contact, direction: 'right' | 'left') => void;
@@ -26,47 +40,6 @@ const SessionContext = createContext<SessionContextType | null>(null);
 
 export const SESSION_DATA_KEY = '__sb_data_v1';
 export const SPREADSHEET_KEY = '__sb_sid_v1';
-
-// --- Chapter / difficulty system ---
-//
-// Contacts are divided into 8 chapters that match the 8 journey legs
-// (JOURNEY has 9 cities, so 8 legs between them). Earlier chapters are
-// intentionally smaller so the user gets quick wins; later chapters are
-// larger and feel more demanding.
-//
-// The distribution is computed by assigning each chapter a relative weight.
-// Weight for chapter i = CHAPTER_WEIGHTS[i]. The number of contacts in a
-// chapter is proportional to its weight relative to the total weight sum.
-// Minimum 3 contacts per chapter to avoid empty-feeling chapters on small lists.
-//
-// Example: 50 contacts across 8 chapters (weights sum = 22) →
-//   [2, 3, 5, 6, 7, 8, 9, 10] (approximately, last adjusted to hit exact total)
-//
-// CHAPTER_WEIGHTS must have the same length as NUM_CHAPTERS (= JOURNEY.length - 1).
-const CHAPTER_WEIGHTS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5]; // sum = 22
-const NUM_CHAPTERS = CHAPTER_WEIGHTS.length; // must equal JOURNEY.length - 1
-
-// Divide `total` contacts proportionally across NUM_CHAPTERS using CHAPTER_WEIGHTS.
-// The last chapter absorbs any rounding remainder so sizes always sum to `total`.
-function computeChapterSizes(total: number): number[] {
-  const weightSum = CHAPTER_WEIGHTS.reduce((a, b) => a + b, 0);
-  const sizes = CHAPTER_WEIGHTS.map((w) => Math.max(3, Math.round((total * w) / weightSum)));
-  // Rounding may leave sizes slightly over or under total — correct in the last slot.
-  const diff = total - sizes.reduce((a, b) => a + b, 0);
-  sizes[NUM_CHAPTERS - 1] = Math.max(3, sizes[NUM_CHAPTERS - 1] + diff);
-  return sizes;
-}
-
-// Return the 0-indexed chapter that corresponds to `processed` swipes so far.
-// A user enters chapter i once all preceding chapters' contacts are exhausted.
-function computeCurrentChapter(processed: number, sizes: number[]): number {
-  let cumulative = 0;
-  for (let i = 0; i < sizes.length; i++) {
-    cumulative += sizes[i];
-    if (processed <= cumulative) return i;
-  }
-  return sizes.length - 1;
-}
 
 // Back-fill chapter data onto sessions saved before the chapter system existed.
 // Recomputes chapter sizes from the existing contact list and derives the current
@@ -134,6 +107,54 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       currentChapter: 0,
     };
     persist(s);
+  };
+
+  const restoreSession = (data: RestoreData) => {
+    if (!user) return;
+    const totalContacts = data.allContacts.length;
+    const processed = data.selected.length + data.dismissedIds.length;
+
+    // If there's existing progress, lock completed chapters and redistribute
+    // remaining contacts. Otherwise compute fresh chapter sizes.
+    let chapterSizes: number[];
+    let currentChapter: number;
+    if (processed > 0 && session?.chapterSizes?.length) {
+      currentChapter = session.currentChapter;
+      chapterSizes = redistributeChapters(session.chapterSizes, currentChapter, totalContacts);
+    } else {
+      chapterSizes = computeChapterSizes(totalContacts);
+      currentChapter = computeCurrentChapter(processed, chapterSizes);
+    }
+
+    const s: SwipeSession = {
+      userId: user.id,
+      userEmail: user.email,
+      contacts: data.pending,
+      selected: data.selected,
+      dismissed: data.dismissedIds,
+      currentIndex: 0,
+      chapterSizes,
+      currentChapter,
+    };
+    persist(s);
+  };
+
+  const expandSession = (newContacts: Contact[]) => {
+    if (!session) return;
+    const mergedContacts = [...session.contacts, ...newContacts];
+    const totalProcessed = session.selected.length + session.dismissed.length;
+    const newTotal = totalProcessed + mergedContacts.length;
+    const chapterSizes = redistributeChapters(
+      session.chapterSizes,
+      session.currentChapter,
+      newTotal,
+    );
+    persist({
+      ...session,
+      contacts: mergedContacts,
+      chapterSizes,
+      // currentChapter stays the same — user doesn't jump
+    });
   };
 
   const swipeRight = (contact: Contact, priority: Priority) => {
@@ -220,6 +241,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         chapterSizes,
         setSyncState,
         initSession,
+        restoreSession,
+        expandSession,
         swipeRight,
         swipeLeft,
         undoSwipe,

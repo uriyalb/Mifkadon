@@ -11,7 +11,7 @@ export interface JourneyCity {
 // IMPORTANT — relationship to the chapter system:
 //   JOURNEY.length        = 9  (one entry per city)
 //   JOURNEY.length - 1    = 8  (number of legs / chapters)
-//   CHAPTER_WEIGHTS.length must equal JOURNEY.length - 1  (see SessionContext.tsx)
+//   CHAPTERS.length must equal JOURNEY.length - 1  (see config/chapters.ts)
 //
 // In SwipePage.tsx the progress bar label for chapter `i` (0-indexed) uses:
 //   JOURNEY[i + 1].name
@@ -59,5 +59,5 @@ export const JOURNEY: JourneyCity[] = [
 ];
 
 // Number of chapter legs = number of cities minus the starting city.
-// This must stay equal to CHAPTER_WEIGHTS.length in SessionContext.tsx.
-export const NUM_CHAPTERS = JOURNEY.length - 1; // 8
+// This must stay equal to CHAPTERS.length in config/chapters.ts.
+export const NUM_JOURNEY_LEGS = JOURNEY.length - 1; // 8
