@@ -1,4 +1,4 @@
-import type { Contact, SelectedContact } from '../types/contact';
+import type { Contact, SelectedContact, Priority } from '../types/contact';
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
@@ -8,6 +8,12 @@ const PRIORITY_LABEL: Record<string, string> = {
   high: 'ניצחון מהיר',
   medium: 'סיכוי טוב',
   low: 'דרושה עבודה',
+};
+
+const LABEL_TO_PRIORITY: Record<string, Priority> = {
+  'ניצחון מהיר': 'high',
+  'סיכוי טוב': 'medium',
+  'דרושה עבודה': 'low',
 };
 
 // Tab names (URL-encoded for API calls)
@@ -295,6 +301,100 @@ export function clearContactRow(
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ values: [['ממתין', '', '']] }),
   }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); });
+}
+
+// ─── Load ALL contacts with their status (for session restore) ──────────────
+export async function loadAllContactsWithStatus(
+  accessToken: string,
+  spreadsheetId: string
+): Promise<{
+  allContacts: Contact[];
+  selected: SelectedContact[];
+  dismissedIds: string[];
+  pending: Contact[];
+}> {
+  const range = `${TAB1_ENC}!A2:H10000`;
+  const resp = await fetch(
+    `${SHEETS_API}/${spreadsheetId}/values/${range}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!resp.ok) return { allContacts: [], selected: [], dismissedIds: [], pending: [] };
+  const data = await resp.json();
+  const rows: string[][] = (data.values as string[][]) ?? [];
+
+  const allContacts: Contact[] = [];
+  const selected: SelectedContact[] = [];
+  const dismissedIds: string[] = [];
+  const pending: Contact[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const sheetRow = i + 1; // 1-based, same convention as loadPendingContacts
+    const contact: Contact = {
+      id: row[0] ?? '',
+      name: row[1] ?? '',
+      phone: row[2] || undefined,
+      email: row[3] || undefined,
+      source: (row[4] ?? 'manual') as Contact['source'],
+      sheetRow,
+    };
+    allContacts.push(contact);
+
+    const status = row[5] ?? 'ממתין';
+    if (status === 'אושר') {
+      const priorityLabel = row[6] ?? '';
+      const priority: Priority = LABEL_TO_PRIORITY[priorityLabel] ?? 'medium';
+      const timestamp = row[7] ?? '';
+      selected.push({
+        ...contact,
+        priority,
+        selectedAt: timestamp || new Date().toISOString(),
+      });
+    } else if (status === 'נדחה') {
+      dismissedIds.push(contact.id);
+    } else {
+      pending.push(contact);
+    }
+  }
+
+  return { allContacts, selected, dismissedIds, pending };
+}
+
+// ─── Protect progress columns from manual editing ───────────────────────────
+export async function protectProgressColumns(
+  accessToken: string,
+  spreadsheetId: string
+): Promise<void> {
+  await fetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [
+        {
+          addProtectedRange: {
+            protectedRange: {
+              range: {
+                sheetId: 0,
+                startColumnIndex: 5, // column F (status)
+                endColumnIndex: 8,   // through column H (timestamp)
+              },
+              description: 'נתוני מיון - אל תערוך ידנית',
+              warningOnly: true,
+            },
+          },
+        },
+        {
+          addProtectedRange: {
+            protectedRange: {
+              range: { sheetId: 1 }, // entire Tab 2
+              description: 'טבלת אושרו - נוצרת אוטומטית',
+              warningOnly: true,
+            },
+          },
+        },
+      ],
+    }),
+  }).catch(() => {});
 }
 
 export function getSpreadsheetUrl(spreadsheetId: string): string {
