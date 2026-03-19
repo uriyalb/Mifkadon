@@ -6,6 +6,13 @@ import { encode, decode, encodeString, decodeString } from '../utils/store';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error';
 
+export interface RestoreData {
+  allContacts: Contact[];
+  selected: SelectedContact[];
+  dismissedIds: string[];
+  pending: Contact[];
+}
+
 interface SessionContextType {
   session: SwipeSession | null;
   spreadsheetId: string | null;
@@ -15,6 +22,7 @@ interface SessionContextType {
   chapterSizes: number[];
   setSyncState: (status: SyncStatus, error?: string) => void;
   initSession: (contacts: Contact[]) => void;
+  restoreSession: (data: RestoreData) => void;
   swipeRight: (contact: Contact, priority: Priority) => void;
   swipeLeft: (contact: Contact) => void;
   undoSwipe: (contact: Contact, direction: 'right' | 'left') => void;
@@ -136,6 +144,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     persist(s);
   };
 
+  const restoreSession = (data: RestoreData) => {
+    if (!user) return;
+    const totalContacts = data.allContacts.length;
+    const chapterSizes = computeChapterSizes(totalContacts);
+    const processed = data.selected.length + data.dismissedIds.length;
+    const currentChapter = computeCurrentChapter(processed, chapterSizes);
+    const s: SwipeSession = {
+      userId: user.id,
+      userEmail: user.email,
+      contacts: data.pending,
+      selected: data.selected,
+      dismissed: data.dismissedIds,
+      currentIndex: 0,
+      chapterSizes,
+      currentChapter,
+    };
+    persist(s);
+  };
+
   const swipeRight = (contact: Contact, priority: Priority) => {
     if (!session) return;
     const selected: SelectedContact = {
@@ -220,6 +247,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         chapterSizes,
         setSyncState,
         initSession,
+        restoreSession,
         swipeRight,
         swipeLeft,
         undoSwipe,

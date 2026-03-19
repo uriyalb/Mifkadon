@@ -11,9 +11,10 @@ import {
   findExistingSpreadsheet,
   createSpreadsheet,
   initContactsTab,
-  loadPendingContacts,
   loadAllContactRows,
   appendContactsToSheet,
+  loadAllContactsWithStatus,
+  protectProgressColumns,
 } from '../services/googleSheets';
 import Header from '../components/Header';
 
@@ -54,7 +55,7 @@ const SOURCE_COLOR: Record<SourceKey, string> = {
 
 export default function ImportPage({ onStart }: Props) {
   const { user } = useAuth();
-  const { initSession, setSpreadsheetId, resetSession } = useSession();
+  const { initSession, restoreSession, setSpreadsheetId, resetSession } = useSession();
 
   const [sources, setSources] = useState<Record<SourceKey, SourceState>>({
     google:    { status: 'idle', count: 0 },
@@ -73,7 +74,7 @@ export default function ImportPage({ onStart }: Props) {
   const [isStarting, setIsStarting] = useState(false);
   const [manualForm, setManualForm] = useState<ManualContact>({ name: '', phone: '', email: '' });
   const [showManual, setShowManual] = useState(false);
-  const [resumeInfo, setResumeInfo] = useState<{ spreadsheetId: string; pending: number } | null>(null);
+  const [resumeInfo, setResumeInfo] = useState<{ spreadsheetId: string; pending: number; processed: number; total: number } | null>(null);
   const [checkingResume, setCheckingResume] = useState(true);
 
   const facebookInputRef = useRef<HTMLInputElement>(null);
@@ -86,8 +87,15 @@ export default function ImportPage({ onStart }: Props) {
     findExistingSpreadsheet(user.accessToken, user.email)
       .then(async (id) => {
         if (id) {
-          const pending = await loadPendingContacts(user.accessToken, id);
-          if (pending.length > 0) setResumeInfo({ spreadsheetId: id, pending: pending.length });
+          const data = await loadAllContactsWithStatus(user.accessToken, id);
+          if (data.pending.length > 0) {
+            setResumeInfo({
+              spreadsheetId: id,
+              pending: data.pending.length,
+              processed: data.selected.length + data.dismissedIds.length,
+              total: data.allContacts.length,
+            });
+          }
         }
       })
       .catch(() => {})
@@ -190,9 +198,9 @@ export default function ImportPage({ onStart }: Props) {
     if (!user || !resumeInfo) return;
     setIsStarting(true);
     try {
-      const pending = await loadPendingContacts(user.accessToken, resumeInfo.spreadsheetId);
+      const data = await loadAllContactsWithStatus(user.accessToken, resumeInfo.spreadsheetId);
       setSpreadsheetId(resumeInfo.spreadsheetId);
-      initSession(pending);
+      restoreSession(data);
       onStart();
     } catch {
       setIsStarting(false);
@@ -226,15 +234,17 @@ export default function ImportPage({ onStart }: Props) {
         if (toAppend.length > 0) {
           await appendContactsToSheet(user.accessToken, existingId, toAppend);
         }
-        // Reload full pending list so session includes existing + new
-        const allPending = await loadPendingContacts(user.accessToken, existingId);
-        setAllContacts(allPending);
+        await protectProgressColumns(user.accessToken, existingId);
+        // Reload full contact list so session includes existing + new
+        const sheetData = await loadAllContactsWithStatus(user.accessToken, existingId);
+        setAllContacts(sheetData.pending);
         resetSession();
         setSpreadsheetId(existingId);
-        setSavedCount(allPending.length);
+        setSavedCount(sheetData.allContacts.length);
       } else {
         const sheetId = await createSpreadsheet(user.accessToken, user.email);
         await initContactsTab(user.accessToken, sheetId, allContacts);
+        await protectProgressColumns(user.accessToken, sheetId);
         resetSession();
         setSpreadsheetId(sheetId);
         setSavedCount(allContacts.length);
@@ -282,7 +292,7 @@ export default function ImportPage({ onStart }: Props) {
             >
               <p className="font-bold text-gray-800 text-sm mb-0.5">נמצא סשן קיים</p>
               <p className="text-gray-500 text-xs mb-3">
-                נותרו {resumeInfo.pending} אנשי קשר ממיון קודם — ממשיך מהמקום שעצרת.
+                מיינת {resumeInfo.processed} מתוך {resumeInfo.total} — נותרו {resumeInfo.pending} אנשי קשר.
               </p>
               <motion.button
                 whileTap={{ scale: 0.97 }}
