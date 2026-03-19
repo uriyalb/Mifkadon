@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useMotionValue, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { Contact, Priority } from '../types/contact';
@@ -22,7 +22,7 @@ interface LastSwipe {
   rowIndex: number;
 }
 
-const MAX_HISTORY = 5;
+const MAX_HISTORY = 10;
 
 export default function SwipePage({ onFinish, onBack }: Props) {
   const { user } = useAuth();
@@ -34,6 +34,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const [remaining, setRemaining] = useState<Contact[]>([]);
   const [showDone, setShowDone] = useState(false);
   const [swipeHistory, setSwipeHistory] = useState<LastSwipe[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Tracks the 400ms "all done" delay so it can be cancelled if the component
   // unmounts before the timeout fires (e.g. the user navigates away mid-animation).
   const showDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,6 +45,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   useEffect(() => {
     return () => {
       if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
+      if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
     };
   }, []);
 
@@ -121,8 +124,17 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     }
   }, [swipeLeft, getRowIndex, user, spreadsheetId, setSyncState]);
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2000);
+  }, []);
+
   const handleUndo = useCallback(() => {
-    if (swipeHistory.length === 0) return;
+    if (swipeHistory.length === 0) {
+      showToast('ניתן לחזור עד 10 כרטיסים בלבד');
+      return;
+    }
     const last = swipeHistory[swipeHistory.length - 1];
     setSwipeHistory((prev) => prev.slice(0, -1));
     undoSwipe(last.contact, last.direction);
@@ -134,7 +146,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
         .then(() => setSyncState('idle'))
         .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState]);
+  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState, showToast]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -165,7 +177,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
         <div className="relative w-[340px] max-w-[90vw]">
           <PriorityZones dragX={dragX} dragY={dragY} />
 
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {remaining.length > 0 ? (
               <CardStack
                 key="stack"
@@ -194,21 +206,26 @@ export default function SwipePage({ onFinish, onBack }: Props) {
         )}
       </AnimatePresence>
 
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white text-sm px-4 py-2 rounded-xl shadow-lg whitespace-nowrap"
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Action buttons */}
       {!showDone && (
         <div className="shrink-0 px-4 pb-2 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-3 w-full max-w-[340px]">
-            {/* Undo / back up to 5 */}
-            <button
-              onClick={handleUndo}
-              disabled={!canUndo}
-              className="flex-none w-16 h-14 rounded-2xl glass border border-pink-200 flex items-center justify-center text-[#FF2D78] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-pink-50 active:enabled:scale-95"
-              title="חזור (↑)"
-            >
-              {swipeHistory.length > 1 ? `חזור (${swipeHistory.length})` : 'חזור'}
-            </button>
-
-            {/* Skip */}
+          <div className="flex items-center gap-3 w-full max-w-[340px]" dir="ltr">
+            {/* Skip — left side matches left-swipe */}
             <button
               onClick={() => canAct && handleSwipeLeft(remaining[0])}
               disabled={!canAct}
@@ -218,7 +235,17 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               <span>דלג</span>
             </button>
 
-            {/* Keep */}
+            {/* Undo — center */}
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="flex-none w-16 h-14 rounded-2xl glass border border-pink-200 flex items-center justify-center text-[#FF2D78] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-pink-50 active:enabled:scale-95"
+              title="חזור (↑)"
+            >
+              חזור
+            </button>
+
+            {/* Keep — right side matches right-swipe */}
             <button
               onClick={() => canAct && handleSwipeRight(remaining[0], 'medium')}
               disabled={!canAct}

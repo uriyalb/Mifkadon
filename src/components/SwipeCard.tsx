@@ -13,7 +13,7 @@ interface Props {
   stackIndex: number; // 0 = top (draggable), 1 = behind, 2 = further
 }
 
-const SWIPE_THRESHOLD = 80;
+const SWIPE_THRESHOLD = 50;
 const PRIORITY_THRESHOLD = 80;
 
 function getPriority(y: number): Priority {
@@ -41,7 +41,7 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
   // Commitment feedback: card clearly shrinks once past swipe threshold
   const commitScale = useTransform(
     dragX,
-    [-170, -SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD, 170],
+    [-120, -SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD, 120],
     [0.82, 0.88, 1, 0.88, 0.82]
   );
   // Commitment ring opacities — appear right as threshold is crossed
@@ -59,16 +59,16 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
       const priority = getPriority(oy);
       const exitY = priority === 'high' ? -200 : priority === 'low' ? 200 : 0;
       await Promise.all([
-        animate(dragX, 700, { duration: 0.28, ease: 'easeIn' }),
-        animate(dragY, exitY, { duration: 0.28, ease: 'easeIn' }),
+        animate(dragX, 700, { duration: 0.18, ease: 'easeIn' }),
+        animate(dragY, exitY, { duration: 0.18, ease: 'easeIn' }),
       ]);
       onSwipeRight(priority);
       dragX.set(0);
       dragY.set(0);
     } else if (ox < -SWIPE_THRESHOLD) {
       await Promise.all([
-        animate(dragX, -700, { duration: 0.28, ease: 'easeIn' }),
-        animate(dragY, 0, { duration: 0.28, ease: 'easeIn' }),
+        animate(dragX, -700, { duration: 0.18, ease: 'easeIn' }),
+        animate(dragY, 0, { duration: 0.18, ease: 'easeIn' }),
       ]);
       onSwipeLeft();
       dragX.set(0);
