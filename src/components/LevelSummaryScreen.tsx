@@ -1,12 +1,16 @@
 import { motion } from 'framer-motion';
+import type { ChapterStats, Priority } from '../types/contact';
+import type { Difficulty } from '../config/chapters';
+import PixelConfetti from './PixelConfetti';
 
 interface Props {
   chapterIndex: number;
   arrivedCity: string;
   flavorText: string;
-  contactsSorted: number;
-  secondsElapsed: number;
+  stats: ChapterStats;
+  difficulty: Difficulty;
   onNext: () => void;
+  isLastChapter: boolean;
 }
 
 function formatTime(seconds: number): string {
@@ -21,29 +25,62 @@ function getStars(seconds: number): number {
   return 1;
 }
 
+const DIFFICULTY_LABEL: Record<Difficulty, { text: string; color: string }> = {
+  easy:   { text: 'קל',     color: '#22C55E' },
+  medium: { text: 'בינוני', color: '#EAB308' },
+  hard:   { text: 'קשה',    color: '#EF4444' },
+};
+
+const PRIORITY_COLORS: Record<Priority, { bg: string; label: string }> = {
+  high:   { bg: 'linear-gradient(135deg, #22C55E, #4ADE80)', label: 'גבוהה' },
+  medium: { bg: 'linear-gradient(135deg, #84CC16, #BEF264)', label: 'בינונית' },
+  low:    { bg: 'linear-gradient(135deg, #EAB308, #FDE047)', label: 'נמוכה' },
+};
+
 export default function LevelSummaryScreen({
   chapterIndex,
   arrivedCity,
   flavorText,
-  contactsSorted,
-  secondsElapsed,
+  stats,
+  difficulty,
   onNext,
+  isLastChapter,
 }: Props) {
-  const stars = getStars(secondsElapsed);
+  const stars = getStars(stats.secondsElapsed);
   const totalChapters = 8;
+  const totalSorted = stats.kept + stats.skipped;
+  const keepPct = totalSorted > 0 ? Math.round((stats.kept / totalSorted) * 100) : 0;
+  const diffCfg = DIFFICULTY_LABEL[difficulty];
+
+  const speedBonus = stats.secondsElapsed <= 30 ? 'בזק!' : stats.secondsElapsed <= 60 ? 'מהיר!' : null;
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 overflow-y-auto"
       style={{
         background: 'linear-gradient(135deg, #0d0d1a 0%, #1a0a2e 40%, #2d0d45 100%)',
       }}
     >
+      {/* Pixel confetti */}
+      <PixelConfetti />
+
+      {/* Difficulty badge */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+        className="absolute top-6 left-6 px-3 py-1 rounded-full text-xs font-bold"
+        style={{ backgroundColor: diffCfg.color + '30', color: diffCfg.color }}
+      >
+        {diffCfg.text}
+      </motion.div>
+
       {/* Stars */}
-      <div className="flex items-end gap-3 mb-6">
+      <div className="flex items-end gap-3 mb-4">
         {[1, 2, 3].map((i) => (
           <motion.div
             key={i}
@@ -81,40 +118,37 @@ export default function LevelSummaryScreen({
         ))}
       </div>
 
-      {/* Title */}
+      {/* Title — "הגעת ל-<city>" */}
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
-        className="text-4xl font-black mb-2 text-center"
+        className="text-3xl font-black mb-1 text-center"
         style={{
           background: 'linear-gradient(135deg, #FFD700, #FF6B35)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}
       >
-        כל הכבוד!
+        הגעת ל-{arrivedCity}!
       </motion.h2>
 
-      {/* Arrived at */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.4 }}
-        className="text-center mb-6"
+      {/* Subtitle */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        className="text-white/50 text-sm max-w-[280px] leading-relaxed text-center mb-4"
       >
-        <p className="text-white/90 text-lg font-bold mb-1">
-          הגעת ל: <span className="text-amber-300">{arrivedCity}</span>
-        </p>
-        <p className="text-white/50 text-sm max-w-[280px] leading-relaxed">{flavorText}</p>
-      </motion.div>
+        {flavorText}
+      </motion.p>
 
-      {/* Character sprite (static, celebratory) */}
+      {/* Character sprite */}
       <motion.div
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.5, duration: 0.6, type: 'spring', stiffness: 200 }}
-        className="mb-6"
+        className="mb-4"
         style={{
           width: 86,
           height: 96,
@@ -128,21 +162,85 @@ export default function LevelSummaryScreen({
         }}
       />
 
-      {/* Stats */}
+      {/* Speed bonus badge */}
+      {speedBonus && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.9, type: 'spring', stiffness: 400 }}
+          className="mb-3 px-3 py-1 rounded-full text-xs font-bold"
+          style={{
+            background: 'linear-gradient(135deg, #FFD700, #FF6B35)',
+            color: '#0d0d1a',
+          }}
+        >
+          {speedBonus}
+        </motion.div>
+      )}
+
+      {/* Rich stats grid */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.0, duration: 0.4 }}
-        className="flex items-center gap-6 mb-2 text-white/70 text-sm"
+        className="w-full max-w-[300px] mb-3"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">👤</span>
-          <span>{contactsSorted} אנשי קשר</span>
+        {/* Row 1: Contacts + Time */}
+        <div className="flex items-center justify-center gap-6 mb-3 text-white/70 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👤</span>
+            <span>{totalSorted} אנשי קשר</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⏱</span>
+            <span>{formatTime(stats.secondsElapsed)}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-lg">⏱</span>
-          <span>{formatTime(secondsElapsed)}</span>
+
+        {/* Row 2: Keep/Skip ratio bar */}
+        <div className="mb-3">
+          <div className="flex justify-between text-[11px] text-white/50 mb-1">
+            <span>{stats.kept} שמרת</span>
+            <span>{stats.skipped} דילגת</span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden bg-white/10 flex">
+            <div
+              className="h-full rounded-l-full"
+              style={{
+                width: `${keepPct}%`,
+                background: 'linear-gradient(90deg, #22C55E, #4ADE80)',
+              }}
+            />
+            <div
+              className="h-full rounded-r-full"
+              style={{
+                width: `${100 - keepPct}%`,
+                background: 'linear-gradient(90deg, #EF4444, #F87171)',
+              }}
+            />
+          </div>
         </div>
+
+        {/* Row 3: Priority breakdown pills */}
+        {stats.kept > 0 && (
+          <div className="flex items-center justify-center gap-2">
+            {(['high', 'medium', 'low'] as Priority[]).map((p) => {
+              const count = stats.priorityBreakdown[p] ?? 0;
+              if (count === 0) return null;
+              const cfg = PRIORITY_COLORS[p];
+              return (
+                <div
+                  key={p}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
+                  style={{ background: cfg.bg }}
+                >
+                  <span>{count}</span>
+                  <span>{cfg.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
 
       {/* Chapter indicator */}
@@ -150,7 +248,7 @@ export default function LevelSummaryScreen({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1, duration: 0.4 }}
-        className="text-white/40 text-xs mb-8"
+        className="text-white/40 text-xs mb-6"
       >
         פרק {chapterIndex + 1} מתוך {totalChapters}
       </motion.p>
@@ -169,7 +267,7 @@ export default function LevelSummaryScreen({
           boxShadow: '0 8px 32px rgba(255, 45, 120, 0.4)',
         }}
       >
-        {chapterIndex + 1 >= totalChapters ? 'לתוצאות' : 'המשך למסע'}
+        {isLastChapter ? 'לתוצאות' : 'המשך למפה'}
       </motion.button>
     </motion.div>
   );
