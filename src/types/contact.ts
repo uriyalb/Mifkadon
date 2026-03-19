@@ -21,6 +21,13 @@ export interface SelectedContact extends Contact {
   selectedAt: string; // ISO date string
 }
 
+export interface ChapterStats {
+  kept: number;
+  skipped: number;
+  priorityBreakdown: Record<Priority, number>;
+  secondsElapsed: number;
+}
+
 export interface SwipeSession {
   userId: string;
   userEmail: string;

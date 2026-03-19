@@ -80,6 +80,19 @@ export function computeCurrentChapter(processed: number, sizes: number[]): numbe
 }
 
 /**
+ * Return the [start, end) indices into a flat contact list for the given chapter.
+ * `processedBefore` contacts were already swiped in earlier chapters.
+ */
+export function getChapterSlice(
+  chapterSizes: number[],
+  chapterIndex: number,
+): { start: number; end: number } {
+  const start = chapterSizes.slice(0, chapterIndex).reduce((a, b) => a + b, 0);
+  const end = start + (chapterSizes[chapterIndex] ?? 0);
+  return { start, end };
+}
+
+/**
  * Redistribute chapters when contacts are added mid-session.
  *
  * Completed chapters (indices 0 .. currentChapter-1) keep their original sizes.
