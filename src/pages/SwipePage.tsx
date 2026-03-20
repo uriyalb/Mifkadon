@@ -314,10 +314,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       )}
 
       {chapterPhase === 'swiping' && (
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative overflow-hidden px-4">
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative px-4">
           <div className="relative w-[340px] max-w-[90vw]">
-            <PriorityZones dragX={dragX} dragY={dragY} />
-
             <AnimatePresence>
               {remaining.length > 0 ? (
                 <CardStack
@@ -332,6 +330,11 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             </AnimatePresence>
           </div>
         </div>
+      )}
+
+      {/* Priority zones — full page overlay, above everything */}
+      {chapterPhase === 'swiping' && (
+        <PriorityZones dragX={dragX} dragY={dragY} />
       )}
 
       {/* Level summary overlay */}
@@ -379,8 +382,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       {/* Action buttons */}
       {chapterPhase === 'swiping' && (
         <div className="shrink-0 px-4 pb-2 flex flex-col items-center gap-3">
-          <div className="relative w-full max-w-[340px]">
-            {/* Priority picker — floats above buttons, no layout shift */}
+          <div className="relative w-full max-w-[340px]" style={{ zIndex: 55 }}>
+            {/* Priority picker — floats above buttons and card */}
             <AnimatePresence>
               {showPriorityPicker && (
                 <motion.div
@@ -389,6 +392,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.12 }}
                   className="absolute bottom-full left-0 right-0 mb-2 flex items-center gap-2 justify-center"
+                  style={{ zIndex: 55 }}
                   dir="ltr"
                 >
                   {([

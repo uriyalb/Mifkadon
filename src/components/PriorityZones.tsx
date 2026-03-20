@@ -66,7 +66,8 @@ export default function PriorityZones({ dragX, dragY }: Props) {
 
   return (
     <motion.div
-      className="absolute right-0 top-0 bottom-0 flex flex-col pointer-events-none z-[45]"
+      className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col pointer-events-none"
+      style={{ height: '60vh', zIndex: 60 }}
       initial={{ x: 150, opacity: 0 }}
       animate={{ x: isVisible ? 0 : 150, opacity: isVisible ? 1 : 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 28 }}
@@ -81,7 +82,7 @@ export default function PriorityZones({ dragX, dragY }: Props) {
             }}
             transition={{ duration: 0.12 }}
             className={`
-              flex-1 flex flex-col items-center justify-center
+              flex-1 flex flex-col items-center justify-center relative
               w-24 text-white shadow-xl
               ${zone.bgClass}
               ${zone.roundedClass}
