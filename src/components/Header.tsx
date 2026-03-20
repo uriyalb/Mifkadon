@@ -13,12 +13,16 @@ export default function Header({ title = 'מיפקדון', showProgress }: Props
   const [showSyncError, setShowSyncError] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2 px-4 pt-safe-top pt-4 pb-2">
+    <div
+      className="flex flex-col gap-2 px-4 pt-safe-top pt-4 pb-2 shadow-md"
+      style={{ background: 'linear-gradient(135deg, #DC2626, #EF4444)' }}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full gradient-pink flex items-center justify-center text-white font-bold text-sm shadow-md">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm shadow-md">
             מ
           </div>
+          <img src="/adumim.svg" alt="אדומים" className="h-5" />
           <h1 className="text-white font-extrabold text-xl tracking-tight">{title}</h1>
         </div>
 

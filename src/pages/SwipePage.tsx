@@ -67,6 +67,10 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   // Mid-chapter milestone tracking
   const milestoneShownRef = useRef(false);
 
+  // Priority picker on keep button
+  const [showPriorityPicker, setShowPriorityPicker] = useState(false);
+  const pickerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const isLastChapter = activeChapter >= chapterSizes.length - 1;
 
   // Compute contacts for the active chapter
@@ -103,6 +107,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     return () => {
       if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
       if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+      if (pickerTimerRef.current !== null) clearTimeout(pickerTimerRef.current);
     };
   }, []);
 
@@ -257,6 +262,30 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   const canAct = remaining.length > 0 && chapterPhase === 'swiping';
   const canUndo = swipeHistory.length > 0;
 
+  const openPriorityPicker = useCallback(() => {
+    if (!canAct) return;
+    setShowPriorityPicker(true);
+    if (pickerTimerRef.current !== null) clearTimeout(pickerTimerRef.current);
+    pickerTimerRef.current = setTimeout(() => {
+      // Auto-dismiss after 3s, default to medium
+      setShowPriorityPicker((prev) => {
+        if (prev && remaining.length > 0) handleSwipeRight(remaining[0], 'medium');
+        return false;
+      });
+    }, 3000);
+  }, [canAct, remaining, handleSwipeRight]);
+
+  const pickPriority = useCallback((priority: Priority) => {
+    if (pickerTimerRef.current !== null) clearTimeout(pickerTimerRef.current);
+    setShowPriorityPicker(false);
+    if (remaining.length > 0) handleSwipeRight(remaining[0], priority);
+  }, [remaining, handleSwipeRight]);
+
+  const dismissPicker = useCallback(() => {
+    if (pickerTimerRef.current !== null) clearTimeout(pickerTimerRef.current);
+    setShowPriorityPicker(false);
+  }, []);
+
   return (
     <div className="h-[100dvh] overflow-hidden flex flex-col" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
       <Header />
@@ -350,10 +379,42 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       {/* Action buttons */}
       {chapterPhase === 'swiping' && (
         <div className="shrink-0 px-4 pb-2 flex flex-col items-center gap-3">
+          {/* Priority picker — appears above action buttons */}
+          <AnimatePresence>
+            {showPriorityPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex items-center gap-2 w-full max-w-[340px] justify-center"
+                dir="ltr"
+              >
+                {([
+                  { priority: 'high' as Priority, label: 'גבוהה', bg: 'linear-gradient(135deg, #22C55E, #4ADE80)' },
+                  { priority: 'medium' as Priority, label: 'בינונית', bg: 'linear-gradient(135deg, #84CC16, #BEF264)' },
+                  { priority: 'low' as Priority, label: 'נמוכה', bg: 'linear-gradient(135deg, #EAB308, #FDE047)' },
+                ]).map((p, i) => (
+                  <motion.button
+                    key={p.priority}
+                    initial={{ opacity: 0, y: 15, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: i * 0.05, type: 'spring', stiffness: 400, damping: 22 }}
+                    onClick={() => pickPriority(p.priority)}
+                    className="flex-1 h-11 rounded-xl text-white font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                    style={{ background: p.bg }}
+                  >
+                    {p.label}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="flex items-center gap-3 w-full max-w-[340px]" dir="ltr">
             {/* Skip — left side matches left-swipe */}
             <button
-              onClick={() => canAct && handleSwipeLeft(remaining[0])}
+              onClick={() => { dismissPicker(); canAct && handleSwipeLeft(remaining[0]); }}
               disabled={!canAct}
               className="flex-1 h-14 rounded-2xl bg-red-500/30 border-2 border-red-400 text-red-100 font-bold text-lg flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-red-500/50 active:enabled:scale-95"
             >
@@ -363,7 +424,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
             {/* Undo — center */}
             <button
-              onClick={handleUndo}
+              onClick={() => { dismissPicker(); handleUndo(); }}
               disabled={!canUndo}
               className="flex-none w-16 h-14 rounded-2xl glass border border-pink-200 flex items-center justify-center text-[#FF2D78] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-pink-50 active:enabled:scale-95"
               title="חזור (↑)"
@@ -371,9 +432,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               חזור
             </button>
 
-            {/* Keep — right side matches right-swipe */}
+            {/* Keep — right side matches right-swipe, opens priority picker */}
             <button
-              onClick={() => canAct && handleSwipeRight(remaining[0], 'medium')}
+              onClick={openPriorityPicker}
               disabled={!canAct}
               className="flex-1 h-14 rounded-2xl gradient-pink text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:opacity-90 active:enabled:scale-95"
             >

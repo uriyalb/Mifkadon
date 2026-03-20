@@ -35,7 +35,7 @@ const ZONES: { priority: Priority; label: string; hint: string; colorClass: stri
   },
 ];
 
-const PRIORITY_THRESHOLD = 80;
+const PRIORITY_THRESHOLD = 50;
 
 function getActivePriority(y: number): Priority {
   if (y < -PRIORITY_THRESHOLD) return 'high';
@@ -59,7 +59,7 @@ export default function PriorityZones({ dragX, dragY }: Props) {
 
   return (
     <motion.div
-      className="absolute right-0 top-0 bottom-0 flex flex-col justify-between py-4 pointer-events-none z-40"
+      className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-2 justify-center pointer-events-none z-[45]"
       initial={{ x: 150, opacity: 0 }}
       animate={{ x: isVisible ? -16 : 150, opacity: isVisible ? 1 : 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 30 }}
@@ -76,13 +76,13 @@ export default function PriorityZones({ dragX, dragY }: Props) {
             transition={{ type: 'spring', stiffness: 350, damping: 28 }}
             className={`
               relative flex flex-col items-center justify-center
-              w-20 h-24 rounded-2xl text-white shadow-xl
+              w-20 h-16 rounded-2xl text-white shadow-xl
               ${zone.bgClass}
               ${isActive ? zone.glowClass : ''}
             `}
           >
             <span className="text-[11px] font-black text-center leading-tight px-1">{zone.label}</span>
-            <span className="text-[9px] font-semibold mt-1 text-white/70">{zone.hint}</span>
+            <span className="text-[9px] font-semibold mt-0.5 text-white/70">{zone.hint}</span>
             {isActive && (
               <motion.div
                 layoutId="zone-indicator"
