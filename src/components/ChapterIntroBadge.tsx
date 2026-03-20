@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Difficulty } from '../config/chapters';
+import { DIFFICULTY_LABELS } from '../config/labels';
+import { JOURNEY_TEXT } from '../config/textJourney';
 
 interface Props {
   chapterIndex: number;
   difficulty: Difficulty;
 }
-
-const LABELS: Record<Difficulty, { text: string; bg: string }> = {
-  easy:   { text: 'קל',     bg: 'linear-gradient(135deg, #22C55E, #4ADE80)' },
-  medium: { text: 'בינוני', bg: 'linear-gradient(135deg, #EAB308, #FDE047)' },
-  hard:   { text: 'קשה',    bg: 'linear-gradient(135deg, #EF4444, #F87171)' },
-};
 
 export default function ChapterIntroBadge({ chapterIndex, difficulty }: Props) {
   const [visible, setVisible] = useState(true);
@@ -22,7 +18,7 @@ export default function ChapterIntroBadge({ chapterIndex, difficulty }: Props) {
     return () => clearTimeout(t);
   }, [chapterIndex]);
 
-  const cfg = LABELS[difficulty];
+  const cfg = DIFFICULTY_LABELS[difficulty];
 
   return (
     <AnimatePresence>
@@ -35,7 +31,7 @@ export default function ChapterIntroBadge({ chapterIndex, difficulty }: Props) {
           className="fixed top-20 left-1/2 z-[55] -translate-x-1/2 px-5 py-2.5 rounded-2xl text-white font-bold text-base shadow-xl pointer-events-none"
           style={{ background: cfg.bg }}
         >
-          פרק {chapterIndex + 1} — {cfg.text}
+          {JOURNEY_TEXT.chapterIntro(chapterIndex, cfg.text)}
         </motion.div>
       )}
     </AnimatePresence>

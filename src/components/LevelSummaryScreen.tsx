@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import type { ChapterStats, Priority } from '../types/contact';
 import type { Difficulty } from '../config/chapters';
+import { DIFFICULTY_LABELS, PRIORITY_LABELS, SPEED_BONUS } from '../config/labels';
+import { JOURNEY_TEXT } from '../config/textJourney';
 import PixelConfetti from './PixelConfetti';
 
 interface Props {
@@ -25,18 +27,6 @@ function getStars(seconds: number): number {
   return 1;
 }
 
-const DIFFICULTY_LABEL: Record<Difficulty, { text: string; color: string }> = {
-  easy:   { text: 'קל',     color: '#22C55E' },
-  medium: { text: 'בינוני', color: '#EAB308' },
-  hard:   { text: 'קשה',    color: '#EF4444' },
-};
-
-const PRIORITY_COLORS: Record<Priority, { bg: string; label: string }> = {
-  high:   { bg: 'linear-gradient(135deg, #22C55E, #4ADE80)', label: 'גבוהה' },
-  medium: { bg: 'linear-gradient(135deg, #84CC16, #BEF264)', label: 'בינונית' },
-  low:    { bg: 'linear-gradient(135deg, #EAB308, #FDE047)', label: 'נמוכה' },
-};
-
 export default function LevelSummaryScreen({
   chapterIndex,
   arrivedCity,
@@ -50,9 +40,9 @@ export default function LevelSummaryScreen({
   const totalChapters = 8;
   const totalSorted = stats.kept + stats.skipped;
   const keepPct = totalSorted > 0 ? Math.round((stats.kept / totalSorted) * 100) : 0;
-  const diffCfg = DIFFICULTY_LABEL[difficulty];
+  const diffCfg = DIFFICULTY_LABELS[difficulty];
 
-  const speedBonus = stats.secondsElapsed <= 30 ? 'בזק!' : stats.secondsElapsed <= 60 ? 'מהיר!' : null;
+  const speedBonusText = stats.secondsElapsed <= 30 ? SPEED_BONUS.flash : stats.secondsElapsed <= 60 ? SPEED_BONUS.fast : null;
 
   return (
     <motion.div
@@ -130,7 +120,7 @@ export default function LevelSummaryScreen({
           WebkitTextFillColor: 'transparent',
         }}
       >
-        הגעת ל-{arrivedCity}!
+        {JOURNEY_TEXT.arrivedTitle(arrivedCity)}
       </motion.h2>
 
       {/* Subtitle */}
@@ -163,7 +153,7 @@ export default function LevelSummaryScreen({
       />
 
       {/* Speed bonus badge */}
-      {speedBonus && (
+      {speedBonusText && (
         <motion.div
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -174,7 +164,7 @@ export default function LevelSummaryScreen({
             color: '#0d0d1a',
           }}
         >
-          {speedBonus}
+          {speedBonusText}
         </motion.div>
       )}
 
@@ -189,7 +179,7 @@ export default function LevelSummaryScreen({
         <div className="flex items-center justify-center gap-6 mb-3 text-white/70 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-lg">👤</span>
-            <span>{totalSorted} אנשי קשר</span>
+            <span>{JOURNEY_TEXT.contactsLabel(totalSorted)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-lg">⏱</span>
@@ -200,8 +190,8 @@ export default function LevelSummaryScreen({
         {/* Row 2: Keep/Skip ratio bar */}
         <div className="mb-3">
           <div className="flex justify-between text-[11px] text-white/50 mb-1">
-            <span>{stats.kept} שמרת</span>
-            <span>{stats.skipped} דילגת</span>
+            <span>{JOURNEY_TEXT.keptLabel(stats.kept)}</span>
+            <span>{JOURNEY_TEXT.skippedLabel(stats.skipped)}</span>
           </div>
           <div className="h-2 rounded-full overflow-hidden bg-white/10 flex">
             <div
@@ -227,7 +217,7 @@ export default function LevelSummaryScreen({
             {(['high', 'medium', 'low'] as Priority[]).map((p) => {
               const count = stats.priorityBreakdown[p] ?? 0;
               if (count === 0) return null;
-              const cfg = PRIORITY_COLORS[p];
+              const cfg = PRIORITY_LABELS[p];
               return (
                 <div
                   key={p}
@@ -235,7 +225,7 @@ export default function LevelSummaryScreen({
                   style={{ background: cfg.bg }}
                 >
                   <span>{count}</span>
-                  <span>{cfg.label}</span>
+                  <span>{cfg.text}</span>
                 </div>
               );
             })}
@@ -250,7 +240,7 @@ export default function LevelSummaryScreen({
         transition={{ delay: 1.1, duration: 0.4 }}
         className="text-white/40 text-xs mb-6"
       >
-        פרק {chapterIndex + 1} מתוך {totalChapters}
+        {JOURNEY_TEXT.chapterOf(chapterIndex, totalChapters)}
       </motion.p>
 
       {/* Next button */}
@@ -267,7 +257,7 @@ export default function LevelSummaryScreen({
           boxShadow: '0 8px 32px rgba(255, 45, 120, 0.4)',
         }}
       >
-        {isLastChapter ? 'לתוצאות' : 'המשך למפה'}
+        {isLastChapter ? JOURNEY_TEXT.nextButton.results : JOURNEY_TEXT.nextButton.map}
       </motion.button>
     </motion.div>
   );

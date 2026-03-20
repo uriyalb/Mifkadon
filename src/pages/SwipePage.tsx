@@ -14,6 +14,8 @@ import ChapterIntroBadge from '../components/ChapterIntroBadge';
 import Header from '../components/Header';
 import { JOURNEY } from '../data/journeyRoute';
 import { CHAPTERS } from '../config/chapters';
+import { PRIORITY_LABELS, SHEET_STATUS } from '../config/labels';
+import { SWIPE_TEXT } from '../config/textSwipe';
 
 interface Props {
   onFinish: () => void;
@@ -140,7 +142,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     const done = chapterStatsRef.current.kept + chapterStatsRef.current.skipped;
     if (chapterTotal > 4 && done === Math.floor(chapterTotal / 2)) {
       milestoneShownRef.current = true;
-      showToast('!חצי מהפרק');
+      showToast(SWIPE_TEXT.toasts.halfChapter);
     }
   }, [chapterTotal, showToast]);
 
@@ -173,7 +175,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     checkMilestone();
     if (user && spreadsheetId) {
       setSyncState('syncing');
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, 'אושר', priority)
+      updateContactRow(user.accessToken, spreadsheetId, rowIndex, SHEET_STATUS.approved, priority)
         .then(() => setSyncState('idle'))
         .catch((e) => setSyncState('error', (e as Error).message));
     }
@@ -195,7 +197,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     checkMilestone();
     if (user && spreadsheetId) {
       setSyncState('syncing');
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, 'נדחה')
+      updateContactRow(user.accessToken, spreadsheetId, rowIndex, SHEET_STATUS.rejected)
         .then(() => setSyncState('idle'))
         .catch((e) => setSyncState('error', (e as Error).message));
     }
@@ -203,7 +205,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
   const handleUndo = useCallback(() => {
     if (swipeHistory.length === 0) {
-      showToast('ניתן לחזור עד 10 כרטיסים בלבד');
+      showToast(SWIPE_TEXT.toasts.undoLimit);
       return;
     }
     const last = swipeHistory[swipeHistory.length - 1];
@@ -395,18 +397,14 @@ export default function SwipePage({ onFinish, onBack }: Props) {
                   style={{ zIndex: 55 }}
                   dir="ltr"
                 >
-                  {([
-                    { priority: 'high' as Priority, label: 'גבוהה', bg: 'linear-gradient(135deg, #22C55E, #4ADE80)' },
-                    { priority: 'medium' as Priority, label: 'בינונית', bg: 'linear-gradient(135deg, #84CC16, #BEF264)' },
-                    { priority: 'low' as Priority, label: 'נמוכה', bg: 'linear-gradient(135deg, #EAB308, #FDE047)' },
-                  ]).map((p) => (
+                  {(['high', 'medium', 'low'] as Priority[]).map((p) => (
                     <button
-                      key={p.priority}
-                      onClick={() => pickPriority(p.priority)}
+                      key={p}
+                      onClick={() => pickPriority(p)}
                       className="flex-1 h-11 rounded-xl text-white font-bold text-sm shadow-lg active:scale-95 transition-transform"
-                      style={{ background: p.bg }}
+                      style={{ background: PRIORITY_LABELS[p].bg }}
                     >
-                      {p.label}
+                      {PRIORITY_LABELS[p].text}
                     </button>
                   ))}
                 </motion.div>
@@ -421,7 +419,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               className="flex-1 h-14 rounded-2xl bg-red-500/30 border-2 border-red-400 text-red-100 font-bold text-lg flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-red-500/50 active:enabled:scale-95"
             >
               <span className="text-xl leading-none">✕</span>
-              <span>דלג</span>
+              <span>{SWIPE_TEXT.buttons.skip}</span>
             </button>
 
             {/* Undo — center */}
@@ -429,9 +427,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               onClick={() => { dismissPicker(); handleUndo(); }}
               disabled={!canUndo}
               className="flex-none w-16 h-14 rounded-2xl glass border border-pink-200 flex items-center justify-center text-[#FF2D78] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-pink-50 active:enabled:scale-95"
-              title="חזור (↑)"
+              title={SWIPE_TEXT.buttons.undoTitle}
             >
-              חזור
+              {SWIPE_TEXT.buttons.undo}
             </button>
 
             {/* Keep — right side matches right-swipe, opens priority picker */}
@@ -440,7 +438,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               disabled={!canAct}
               className="flex-1 h-14 rounded-2xl gradient-pink text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:opacity-90 active:enabled:scale-95"
             >
-              <span>שמור</span>
+              <span>{SWIPE_TEXT.buttons.keep}</span>
               <span className="text-xl leading-none">✓</span>
             </button>
           </div>
@@ -451,7 +449,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             onClick={onBack}
             className="text-white/70 text-xs hover:text-white transition-colors pb-safe-bottom pb-2"
           >
-            חזור לייבוא
+            {SWIPE_TEXT.backLink}
           </button>
         </div>
       )}

@@ -1,41 +1,33 @@
 import { useState } from 'react';
 import { motion, MotionValue, useMotionValueEvent } from 'framer-motion';
+import type { Priority } from '../types/contact';
+import { PRIORITY_LABELS } from '../config/labels';
 
 interface Props {
   dragX: MotionValue<number>;
   dragY: MotionValue<number>;
 }
 
-type Priority = 'high' | 'medium' | 'low';
-
 const ZONES: {
   priority: Priority;
-  label: string;
-  hint: string;
   glowClass: string;
   bgClass: string;
   roundedClass: string;
 }[] = [
   {
     priority: 'high',
-    label: 'טופס בטוח',
-    hint: '↑',
     glowClass: 'zone-glow-high',
     bgClass: 'gradient-high',
     roundedClass: 'rounded-tr-2xl',
   },
   {
     priority: 'medium',
-    label: 'סיכוי טוב',
-    hint: '→',
     glowClass: 'zone-glow-medium',
     bgClass: 'gradient-medium',
     roundedClass: '',
   },
   {
     priority: 'low',
-    label: 'דרושה עבודה',
-    hint: '↓',
     glowClass: 'zone-glow-low',
     bgClass: 'gradient-low',
     roundedClass: 'rounded-br-2xl',
@@ -89,8 +81,8 @@ export default function PriorityZones({ dragX, dragY }: Props) {
               ${isActive ? zone.glowClass : ''}
             `}
           >
-            <span className="text-xs font-black text-center leading-tight px-1">{zone.label}</span>
-            <span className="text-sm font-bold mt-0.5 text-white/80">{zone.hint}</span>
+            <span className="text-xs font-black text-center leading-tight px-1">{PRIORITY_LABELS[zone.priority].zoneName}</span>
+            <span className="text-sm font-bold mt-0.5 text-white/80">{PRIORITY_LABELS[zone.priority].hint}</span>
             {isActive && (
               <motion.div
                 layoutId="zone-indicator"

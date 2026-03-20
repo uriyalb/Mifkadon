@@ -2,6 +2,8 @@
 import { motion, MotionValue, useTransform, animate } from 'framer-motion';
 import type { Contact, Priority } from '../types/contact';
 import ContactAvatar from './ContactAvatar';
+import { SOURCE_LABELS } from '../config/labels';
+import { SWIPE_TEXT } from '../config/textSwipe';
 
 interface Props {
   contact: Contact;
@@ -21,14 +23,6 @@ function getPriority(y: number): Priority {
   if (y > PRIORITY_THRESHOLD) return 'low';
   return 'medium';
 }
-
-const SOURCE_LABEL: Record<string, string> = {
-  google: 'Google Contacts',
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  manual: 'ידני',
-  phone: 'אנשי קשר',
-};
 
 export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipeLeft, isTop, stackIndex }: Props) {
   const rotate = useTransform(dragX, [-300, 0, 300], [-18, 0, 18]);
@@ -127,7 +121,7 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
           >
             <div className="absolute inset-0 bg-[#FF2D78]/20 rounded-3xl" />
             <div className="rotate-[-20deg] border-4 border-[#FF2D78] rounded-2xl px-6 py-2 z-30">
-              <span className="text-[#FF2D78] font-black text-3xl tracking-widest">שמור</span>
+              <span className="text-[#FF2D78] font-black text-3xl tracking-widest">{SWIPE_TEXT.overlays.keep}</span>
             </div>
           </motion.div>
         )}
@@ -140,7 +134,7 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
           >
             <div className="absolute inset-0 bg-[#EF4444]/20 rounded-3xl" />
             <div className="rotate-[20deg] border-4 border-[#EF4444] rounded-2xl px-6 py-2 z-30">
-              <span className="text-[#EF4444] font-black text-3xl tracking-widest">דלג</span>
+              <span className="text-[#EF4444] font-black text-3xl tracking-widest">{SWIPE_TEXT.overlays.skip}</span>
             </div>
           </motion.div>
         )}
@@ -176,7 +170,7 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
             <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
-              {SOURCE_LABEL[contact.source] ?? contact.source}
+              {SOURCE_LABELS[contact.source] ?? contact.source}
             </span>
           </div>
         </div>

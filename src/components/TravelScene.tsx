@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Difficulty } from '../config/chapters';
+import { DIFFICULTY_LABELS } from '../config/labels';
 
 interface Props {
   fromCity: string;
@@ -10,12 +11,6 @@ interface Props {
   difficulty: Difficulty;
 }
 
-const DIFFICULTY_CFG: Record<Difficulty, { text: string; color: string }> = {
-  easy:   { text: 'קל',     color: '#22C55E' },
-  medium: { text: 'בינוני', color: '#EAB308' },
-  hard:   { text: 'קשה',    color: '#EF4444' },
-};
-
 // Inline SVG data URLs for pixel-art building silhouettes
 const FAR_BUILDINGS = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='70' fill='none'%3E%3Crect x='0' y='30' width='28' height='40' fill='%23150b30'/%3E%3Crect x='3' y='33' width='4' height='3' fill='%23ff8c42' opacity='0.3'/%3E%3Crect x='12' y='38' width='4' height='3' fill='%23ffb347' opacity='0.25'/%3E%3Crect x='35' y='15' width='18' height='55' fill='%231a0e3d'/%3E%3Crect x='38' y='18' width='3' height='3' fill='%23ff6b35' opacity='0.35'/%3E%3Crect x='46' y='28' width='3' height='3' fill='%23ffb347' opacity='0.2'/%3E%3Crect x='60' y='25' width='40' height='45' fill='%23150b30'/%3E%3Crect x='65' y='28' width='4' height='3' fill='%23ff8c42' opacity='0.3'/%3E%3Crect x='78' y='33' width='4' height='3' fill='%23ff6b35' opacity='0.25'/%3E%3Crect x='85' y='43' width='4' height='3' fill='%23ffb347' opacity='0.3'/%3E%3Crect x='108' y='20' width='22' height='50' fill='%231a0e3d'/%3E%3Crect x='112' y='24' width='3' height='3' fill='%23ff8c42' opacity='0.3'/%3E%3Crect x='120' y='34' width='3' height='3' fill='%23ffb347' opacity='0.2'/%3E%3Crect x='138' y='35' width='32' height='35' fill='%23150b30'/%3E%3Crect x='142' y='38' width='4' height='3' fill='%23ff6b35' opacity='0.25'/%3E%3Crect x='155' y='45' width='4' height='3' fill='%23ff8c42' opacity='0.3'/%3E%3Crect x='178' y='12' width='15' height='58' fill='%231a0e3d'/%3E%3Crect x='181' y='16' width='3' height='3' fill='%23ffb347' opacity='0.35'/%3E%3Crect x='200' y='28' width='35' height='42' fill='%23150b30'/%3E%3Crect x='205' y='32' width='4' height='3' fill='%23ff6b35' opacity='0.3'/%3E%3Crect x='220' y='40' width='4' height='3' fill='%23ff8c42' opacity='0.2'/%3E%3Crect x='242' y='22' width='20' height='48' fill='%231a0e3d'/%3E%3Crect x='246' y='26' width='3' height='3' fill='%23ffb347' opacity='0.3'/%3E%3Crect x='270' y='32' width='38' height='38' fill='%23150b30'/%3E%3Crect x='275' y='36' width='4' height='3' fill='%23ff6b35' opacity='0.25'/%3E%3Crect x='290' y='42' width='4' height='3' fill='%23ff8c42' opacity='0.3'/%3E%3Crect x='316' y='18' width='16' height='52' fill='%231a0e3d'/%3E%3Crect x='319' y='22' width='3' height='3' fill='%23ffb347' opacity='0.35'/%3E%3Crect x='340' y='30' width='30' height='40' fill='%23150b30'/%3E%3Crect x='345' y='34' width='4' height='3' fill='%23ff6b35' opacity='0.3'/%3E%3Crect x='360' y='44' width='4' height='3' fill='%23ff8c42' opacity='0.2'/%3E%3Crect x='378' y='24' width='22' height='46' fill='%231a0e3d'/%3E%3Crect x='382' y='28' width='3' height='3' fill='%23ffb347' opacity='0.25'/%3E%3C/svg%3E")`;
 
@@ -23,7 +18,7 @@ const NEAR_BUILDINGS = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 export default function TravelScene({ fromCity, toCity, pct, current, total, difficulty }: Props) {
   const clampedPct = Math.max(0, Math.min(100, pct));
-  const diffCfg = DIFFICULTY_CFG[difficulty];
+  const diffCfg = DIFFICULTY_LABELS[difficulty];
 
   return (
     <div className="w-full select-none" dir="ltr" style={{ height: 150 }}>

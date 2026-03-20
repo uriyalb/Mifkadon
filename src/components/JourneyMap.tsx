@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { JourneyCity } from '../data/journeyRoute';
 import { CHAPTERS } from '../config/chapters';
+import { DIFFICULTY_LABELS } from '../config/labels';
+import { JOURNEY_TEXT } from '../config/textJourney';
 
 interface Props {
   completedChapter: number; // 0-indexed chapter just completed
@@ -9,18 +11,6 @@ interface Props {
   onContinue: () => void;
   isLastChapter: boolean;
 }
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: '#22C55E',
-  medium: '#EAB308',
-  hard: '#EF4444',
-};
-
-const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: 'קל',
-  medium: 'בינוני',
-  hard: 'קשה',
-};
 
 // Node vertical positions (top=Jerusalem, bottom=Ashdod), reversed so index 0=bottom
 function getNodeY(index: number, total: number): number {
@@ -81,7 +71,7 @@ export default function JourneyMap({ completedChapter, cities, onContinue, isLas
         transition={{ delay: 0.3 }}
         className="text-xl font-bold text-white/90 mb-2 text-center"
       >
-        מפת המסע
+        {JOURNEY_TEXT.mapTitle}
       </motion.h2>
 
       {/* Map container */}
@@ -179,12 +169,12 @@ export default function JourneyMap({ completedChapter, cities, onContinue, isLas
                     top: -16,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    backgroundColor: DIFFICULTY_COLORS[legDifficulty.difficulty] + '30',
-                    color: DIFFICULTY_COLORS[legDifficulty.difficulty],
+                    backgroundColor: DIFFICULTY_LABELS[legDifficulty.difficulty].color + '30',
+                    color: DIFFICULTY_LABELS[legDifficulty.difficulty].color,
                     opacity: isCompleted ? 0.8 : 0.3,
                   }}
                 >
-                  {DIFFICULTY_LABELS[legDifficulty.difficulty]}
+                  {DIFFICULTY_LABELS[legDifficulty.difficulty].text}
                 </div>
               )}
             </motion.div>
@@ -249,7 +239,7 @@ export default function JourneyMap({ completedChapter, cities, onContinue, isLas
           pointerEvents: ilanArrived ? 'auto' : 'none',
         }}
       >
-        {isLastChapter ? 'לתוצאות הסופיות' : `יוצאים ל-${nextCity}!`}
+        {isLastChapter ? JOURNEY_TEXT.mapButton.results : JOURNEY_TEXT.mapButton.next(nextCity!)}
       </motion.button>
     </motion.div>
   );

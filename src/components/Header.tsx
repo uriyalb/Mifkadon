@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
+import { HEADER_TEXT } from '../config/textHeader';
 
 interface Props {
   title?: string;
   showProgress?: React.ReactNode;
 }
 
-export default function Header({ title = 'מיפקדון', showProgress }: Props) {
+export default function Header({ title = HEADER_TEXT.defaultTitle, showProgress }: Props) {
   const { user, signOut } = useAuth();
   const { syncStatus, syncError } = useSession();
   const [showSyncError, setShowSyncError] = useState(false);
@@ -43,22 +44,22 @@ export default function Header({ title = 'מיפקדון', showProgress }: Props
         {user && (
           <div className="flex items-center gap-1.5 shrink-0">
             {syncStatus === 'syncing' && (
-              <div className="w-2.5 h-2.5 rounded-full border-[1.5px] border-white/50 border-t-transparent animate-spin" title="מסנכרן..." />
+              <div className="w-2.5 h-2.5 rounded-full border-[1.5px] border-white/50 border-t-transparent animate-spin" title={HEADER_TEXT.sync.syncing} />
             )}
             {syncStatus === 'idle' && (
-              <div className="w-1.5 h-1.5 rounded-full bg-green-300" title="מסונכרן" />
+              <div className="w-1.5 h-1.5 rounded-full bg-green-300" title={HEADER_TEXT.sync.idle} />
             )}
             {syncStatus === 'error' && (
               <div className="relative">
                 <button
                   onClick={() => setShowSyncError((v) => !v)}
                   className="w-2.5 h-2.5 rounded-full bg-yellow-400 hover:bg-yellow-300 transition-colors"
-                  title="שגיאת סנכרון — לחץ לפרטים"
+                  title={HEADER_TEXT.sync.errorTooltip}
                 />
                 {showSyncError && syncError && (
                   <div className="absolute left-0 top-4 z-50 w-56 bg-gray-900 text-white text-xs rounded-xl p-3 shadow-xl leading-relaxed" dir="ltr">
                     {syncError}
-                    <button onClick={() => setShowSyncError(false)} className="block mt-1 text-gray-400 hover:text-white">✕ close</button>
+                    <button onClick={() => setShowSyncError(false)} className="block mt-1 text-gray-400 hover:text-white">{HEADER_TEXT.sync.close}</button>
                   </div>
                 )}
               </div>
@@ -85,7 +86,7 @@ export default function Header({ title = 'מיפקדון', showProgress }: Props
                     onClick={() => { setShowMenu(false); signOut(); }}
                     className="w-full text-right px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    התנתק
+                    {HEADER_TEXT.logout}
                   </button>
                 </div>
               )}
