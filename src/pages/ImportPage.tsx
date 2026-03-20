@@ -17,6 +17,7 @@ import {
   protectProgressColumns,
 } from '../services/googleSheets';
 import Header from '../components/Header';
+import { IMPORT_TEXT } from '../config/textImport';
 
 interface Props {
   onStart: () => void;
@@ -170,7 +171,7 @@ export default function ImportPage({ onStart }: Props) {
     updateSource('phone', { status: 'loading' });
     try {
       const contacts = await readVCardFile(file);
-      if (contacts.length === 0) throw new Error('לא נמצאו אנשי קשר בקובץ');
+      if (contacts.length === 0) throw new Error(IMPORT_TEXT.errors.noContacts);
       updateSource('phone', { status: 'done', count: contacts.length });
       addContacts(contacts);
     } catch (err) {
@@ -254,11 +255,11 @@ export default function ImportPage({ onStart }: Props) {
     } catch (e) {
       const msg = (e as Error).message ?? '';
       if (msg.includes('has not been used') || msg.includes('is disabled') || msg.includes('SERVICE_DISABLED')) {
-        setSaveError('ה-API של Google Sheets או Drive אינו מופעל בפרויקט Google Cloud שלך. עקוב אחר ההוראות למטה.');
+        setSaveError(IMPORT_TEXT.errors.apiDisabled);
       } else if (msg.includes('insufficient') || msg.includes('PERMISSION_DENIED')) {
-        setSaveError('חסרות הרשאות. התנתק והתחבר מחדש כדי לאשר את הגישה ל-Google Sheets ו-Drive.');
+        setSaveError(IMPORT_TEXT.errors.noPermission);
       } else {
-        setSaveError(msg || 'שגיאה בשמירה ל-Google Sheets. נסה שוב.');
+        setSaveError(msg || IMPORT_TEXT.errors.sheetsSave);
       }
     } finally {
       setIsSaving(false);
@@ -292,9 +293,9 @@ export default function ImportPage({ onStart }: Props) {
               exit={{ opacity: 0, y: -16 }}
               className="glass rounded-2xl p-4 mb-4 border-2 border-[#FF2D78]/30"
             >
-              <p className="font-bold text-gray-800 text-sm mb-0.5">נמצא סשן קיים</p>
+              <p className="font-bold text-gray-800 text-sm mb-0.5">{IMPORT_TEXT.resume.title}</p>
               <p className="text-gray-500 text-xs mb-3">
-                מיינת {resumeInfo.processed} מתוך {resumeInfo.total} — נותרו {resumeInfo.pending} אנשי קשר.
+                {IMPORT_TEXT.resume.info(resumeInfo.processed, resumeInfo.total, resumeInfo.pending)}
               </p>
               <motion.button
                 whileTap={{ scale: 0.97 }}
@@ -302,13 +303,13 @@ export default function ImportPage({ onStart }: Props) {
                 disabled={isStarting}
                 className="w-full gradient-pink text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
               >
-                המשך מהמקום שעצרת
+                {IMPORT_TEXT.resume.button}
               </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <h2 className="text-white font-bold text-xl mb-4">ייבוא אנשי קשר</h2>
+        <h2 className="text-white font-bold text-xl mb-4">{IMPORT_TEXT.title}</h2>
 
         {/* Source cards */}
         <div className="space-y-3 mb-6">
@@ -316,25 +317,25 @@ export default function ImportPage({ onStart }: Props) {
           {/* Google */}
           <SourceCard
             color={SOURCE_COLOR.google}
-            title="Google Contacts"
-            description="ייבוא כל אנשי הקשר מחשבון Google שלך"
+            title={IMPORT_TEXT.sources.google.title}
+            description={IMPORT_TEXT.sources.google.desc}
             status={sources.google.status}
             count={sources.google.count}
             error={sources.google.error}
             onAction={handleGoogle}
-            actionLabel="ייבא"
+            actionLabel={IMPORT_TEXT.sources.google.action}
           />
 
           {/* Facebook */}
           <SourceCard
             color={SOURCE_COLOR.facebook}
-            title="Facebook"
-            description="ייבוא חברים מקובץ JSON של פייסבוק (friends.json)"
+            title={IMPORT_TEXT.sources.facebook.title}
+            description={IMPORT_TEXT.sources.facebook.desc}
             status={sources.facebook.status}
             count={sources.facebook.count}
             error={sources.facebook.error}
             onAction={() => facebookInputRef.current?.click()}
-            actionLabel="בחר קובץ"
+            actionLabel={IMPORT_TEXT.sources.facebook.action}
           >
             <input
               ref={facebookInputRef}
@@ -351,15 +352,12 @@ export default function ImportPage({ onStart }: Props) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-[#FF2D78] font-medium underline underline-offset-2"
                 >
-                  פתח את דף הורדת הנתונים של פייסבוק
+                  {IMPORT_TEXT.instructions.facebook.linkText}
                 </a>
                 <details>
-                  <summary className="cursor-pointer text-[#FF2D78] font-medium">הוראות</summary>
+                  <summary className="cursor-pointer text-[#FF2D78] font-medium">{IMPORT_TEXT.instructions.facebook.summary}</summary>
                   <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
-                    <li>בחר "הורד את המידע שלך" ← "בחר סוגי מידע ספציפיים"</li>
-                    <li>סמן "חברים ועוקבים" בלבד</li>
-                    <li>בחר פורמט JSON ← "בקש קבצים"</li>
-                    <li>לאחר קבלת הקובץ — פתח את friends.json מהארכיון</li>
+                    {IMPORT_TEXT.instructions.facebook.steps.map((step, i) => <li key={i}>{step}</li>)}
                   </ol>
                 </details>
               </div>
@@ -369,13 +367,13 @@ export default function ImportPage({ onStart }: Props) {
           {/* Instagram */}
           <SourceCard
             color={SOURCE_COLOR.instagram}
-            title="Instagram"
-            description="ייבוא מקובץ JSON של אינסטגרם (followers_1.json)"
+            title={IMPORT_TEXT.sources.instagram.title}
+            description={IMPORT_TEXT.sources.instagram.desc}
             status={sources.instagram.status}
             count={sources.instagram.count}
             error={sources.instagram.error}
             onAction={() => instagramInputRef.current?.click()}
-            actionLabel="בחר קובץ"
+            actionLabel={IMPORT_TEXT.sources.instagram.action}
           >
             <input
               ref={instagramInputRef}
@@ -392,15 +390,12 @@ export default function ImportPage({ onStart }: Props) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-[#FF2D78] font-medium underline underline-offset-2"
                 >
-                  פתח את דף הורדת הנתונים של אינסטגרם
+                  {IMPORT_TEXT.instructions.instagram.linkText}
                 </a>
                 <details>
-                  <summary className="cursor-pointer text-[#FF2D78] font-medium">הוראות</summary>
+                  <summary className="cursor-pointer text-[#FF2D78] font-medium">{IMPORT_TEXT.instructions.instagram.summary}</summary>
                   <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
-                    <li>בחר "הורד או העבר מידע" ← "מידע ספציפי"</li>
-                    <li>סמן "עוקבים ועוקבים אחרי" בלבד</li>
-                    <li>בחר פורמט JSON ← "צור קבצים"</li>
-                    <li>פתח את הקובץ followers_1.json מהארכיון שיגיע למייל</li>
+                    {IMPORT_TEXT.instructions.instagram.steps.map((step, i) => <li key={i}>{step}</li>)}
                   </ol>
                 </details>
               </div>
@@ -410,13 +405,13 @@ export default function ImportPage({ onStart }: Props) {
           {/* Phone / vCard */}
           <SourceCard
             color={SOURCE_COLOR.phone}
-            title="אנשי קשר מהטלפון"
-            description="ייבוא מקובץ vCard (.vcf) — מתאים למשתמשי iPhone שאינם מסנכרנים עם Google"
+            title={IMPORT_TEXT.sources.phone.title}
+            description={IMPORT_TEXT.sources.phone.desc}
             status={sources.phone.status}
             count={sources.phone.count}
             error={sources.phone.error}
             onAction={() => vcardInputRef.current?.click()}
-            actionLabel="בחר .vcf"
+            actionLabel={IMPORT_TEXT.sources.phone.action}
           >
             <input
               ref={vcardInputRef}
@@ -428,13 +423,10 @@ export default function ImportPage({ onStart }: Props) {
             {sources.phone.status === 'idle' && (
               <details className="text-xs text-gray-500 mt-2">
                 <summary className="cursor-pointer text-[#FF2D78] font-medium">
-                  איך מייצאים מ-iPhone?
+                  {IMPORT_TEXT.instructions.iphone.summary}
                 </summary>
                 <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
-                  <li>פתח את אפליקציית אנשי הקשר</li>
-                  <li>לחץ על הגדרות (⚙) → ייצוא אנשי קשר</li>
-                  <li>בחר "כל אנשי הקשר" → שתף → שמור לקבצים</li>
-                  <li>העלה את קובץ ה-.vcf כאן</li>
+                  {IMPORT_TEXT.instructions.iphone.steps.map((step, i) => <li key={i}>{step}</li>)}
                 </ol>
               </details>
             )}
@@ -446,9 +438,9 @@ export default function ImportPage({ onStart }: Props) {
               <div className="flex items-center gap-2.5">
                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${SOURCE_COLOR.manual}`} />
                 <div>
-                  <h3 className="font-bold text-gray-800 text-sm">הוספה ידנית</h3>
+                  <h3 className="font-bold text-gray-800 text-sm">{IMPORT_TEXT.manual.title}</h3>
                   {sources.manual.count > 0 && (
-                    <p className="text-xs text-gray-500">{sources.manual.count} נוספו</p>
+                    <p className="text-xs text-gray-500">{IMPORT_TEXT.manual.count(sources.manual.count)}</p>
                   )}
                 </div>
               </div>
@@ -456,7 +448,7 @@ export default function ImportPage({ onStart }: Props) {
                 onClick={() => setShowManual((v) => !v)}
                 className="text-[#FF2D78] text-sm font-bold"
               >
-                {showManual ? 'סגור' : '+ הוסף'}
+                {showManual ? IMPORT_TEXT.manual.closeButton : IMPORT_TEXT.manual.addButton}
               </button>
             </div>
 
@@ -471,21 +463,21 @@ export default function ImportPage({ onStart }: Props) {
                   <div className="space-y-2 mt-2">
                     <input
                       type="text"
-                      placeholder="שם *"
+                      placeholder={IMPORT_TEXT.manual.fields.name}
                       value={manualForm.name}
                       onChange={(e) => setManualForm((f) => ({ ...f, name: e.target.value }))}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF2D78]"
                     />
                     <input
                       type="tel"
-                      placeholder="טלפון"
+                      placeholder={IMPORT_TEXT.manual.fields.phone}
                       value={manualForm.phone}
                       onChange={(e) => setManualForm((f) => ({ ...f, phone: e.target.value }))}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF2D78]"
                     />
                     <input
                       type="email"
-                      placeholder="אימייל"
+                      placeholder={IMPORT_TEXT.manual.fields.email}
                       value={manualForm.email}
                       onChange={(e) => setManualForm((f) => ({ ...f, email: e.target.value }))}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF2D78]"
@@ -495,7 +487,7 @@ export default function ImportPage({ onStart }: Props) {
                       disabled={!manualForm.name.trim()}
                       className="w-full gradient-pink text-white font-bold py-2 rounded-xl text-sm disabled:opacity-50"
                     >
-                      הוסף איש קשר
+                      {IMPORT_TEXT.manual.submitButton}
                     </button>
                   </div>
                 </motion.div>
@@ -515,7 +507,7 @@ export default function ImportPage({ onStart }: Props) {
               {/* Contact count */}
               <div className="glass rounded-2xl p-4 mb-4 text-center">
                 <p className="text-2xl font-black text-gray-800">{totalContacts}</p>
-                <p className="text-gray-500 text-sm">אנשי קשר מוכנים למיון</p>
+                <p className="text-gray-500 text-sm">{IMPORT_TEXT.ready.subtitle}</p>
               </div>
 
               {/* Save state */}
@@ -529,7 +521,7 @@ export default function ImportPage({ onStart }: Props) {
                       </svg>
                     </span>
                     <p className="text-green-700 text-sm font-medium">
-                      {savedCount} אנשי קשר נשמרו ב-Google Sheets — כל שינוי יתעדכן אוטומטית
+                      {IMPORT_TEXT.ready.sheetsInfo(savedCount!)}
                     </p>
                   </div>
 
@@ -542,7 +534,7 @@ export default function ImportPage({ onStart }: Props) {
                   >
                     {isStarting ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : 'התחל מיון'}
+                    ) : IMPORT_TEXT.ready.startButton}
                   </motion.button>
                 </div>
               ) : (
@@ -552,12 +544,9 @@ export default function ImportPage({ onStart }: Props) {
                     <div className="glass rounded-xl p-3 border border-red-200">
                       <p className="text-red-600 text-sm font-medium mb-1">{saveError}</p>
                       <details className="text-xs text-gray-500">
-                        <summary className="cursor-pointer text-[#FF2D78] font-medium">בדיקת תצורה נפוצה</summary>
+                        <summary className="cursor-pointer text-[#FF2D78] font-medium">{IMPORT_TEXT.instructions.apiSetup.summary}</summary>
                         <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
-                          <li>כנס ל-Google Cloud Console ← APIs &amp; Services ← Library</li>
-                          <li>חפש "Google Sheets API" ← Enable</li>
-                          <li>חפש "Google Drive API" ← Enable</li>
-                          <li>חזור לכאן והתחבר מחדש עם Google</li>
+                          {IMPORT_TEXT.instructions.apiSetup.steps.map((step, i) => <li key={i}>{step}</li>)}
                         </ol>
                       </details>
                     </div>
@@ -573,9 +562,9 @@ export default function ImportPage({ onStart }: Props) {
                     {isSaving ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        שומר ל-Google Sheets...
+                        {IMPORT_TEXT.ready.savingMessage}
                       </>
-                    ) : 'שמור ל-Google Sheets והתחל'}
+                    ) : IMPORT_TEXT.ready.startWithSheetsButton}
                   </motion.button>
 
                   <button
@@ -583,7 +572,7 @@ export default function ImportPage({ onStart }: Props) {
                     disabled={isStarting}
                     className="w-full glass text-gray-600 font-bold py-3 rounded-2xl text-sm hover:bg-white/70 transition-all disabled:opacity-60"
                   >
-                    התחל ללא שמירה
+                    {IMPORT_TEXT.ready.startWithoutSheetsButton}
                   </button>
                 </div>
               )}
@@ -593,7 +582,7 @@ export default function ImportPage({ onStart }: Props) {
 
         {totalContacts === 0 && !checkingResume && (
           <p className="text-white/70 text-center text-sm mt-4">
-            ייבא לפחות מקור אחד כדי להתחיל
+            {IMPORT_TEXT.emptyState}
           </p>
         )}
       </div>
@@ -648,7 +637,7 @@ function SourceCard({ color, title, description, status, count, error, onAction,
           {status === 'loading' ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : status === 'done' ? (
-            'יובא'
+            IMPORT_TEXT.imported
           ) : (
             actionLabel
           )}

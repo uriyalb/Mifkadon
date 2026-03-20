@@ -6,15 +6,17 @@ import type { SelectedContact, Priority } from '../types/contact';
 import { syncApprovedTab, getSpreadsheetUrl } from '../services/googleSheets';
 import ContactAvatar from '../components/ContactAvatar';
 import Header from '../components/Header';
+import { PRIORITY_LABELS } from '../config/labels';
+import { RESULTS_TEXT } from '../config/textResults';
 
 interface Props {
   onReset: () => void;
 }
 
-const PRIORITY_CONFIG = {
-  high:   { label: 'טופס בטוח',   bgClass: 'gradient-high',   textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
-  medium: { label: 'סיכוי טוב',   bgClass: 'gradient-medium', textColor: 'text-lime-700',   bgLight: 'bg-lime-50',   border: 'border-lime-200' },
-  low:    { label: 'דרושה עבודה', bgClass: 'gradient-low',    textColor: 'text-yellow-700', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
+const PRIORITY_CONFIG: Record<Priority, { bgClass: string; textColor: string; bgLight: string; border: string }> = {
+  high:   { bgClass: 'gradient-high',   textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
+  medium: { bgClass: 'gradient-medium', textColor: 'text-lime-700',   bgLight: 'bg-lime-50',   border: 'border-lime-200' },
+  low:    { bgClass: 'gradient-low',    textColor: 'text-yellow-700', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
 };
 
 export default function ResultsPage({ onReset }: Props) {
@@ -42,7 +44,7 @@ export default function ResultsPage({ onReset }: Props) {
         setSheetUrl(getSpreadsheetUrl(spreadsheetId));
       })
       .catch(() => {
-        setError('לא הצלחנו לסנכרן עם Google Sheets. נסה שוב.');
+        setError(RESULTS_TEXT.sync.syncFailed);
       })
       .finally(() => setIsSyncing(false));
   }, []);
@@ -56,7 +58,7 @@ export default function ResultsPage({ onReset }: Props) {
 
   return (
     <div className="h-[100dvh] flex flex-col" dir="rtl">
-      <Header title="התוצאות" />
+      <Header title={RESULTS_TEXT.title} />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
         {/* Summary cards */}
@@ -71,7 +73,7 @@ export default function ResultsPage({ onReset }: Props) {
                 className={`${cfg.bgClass} rounded-2xl p-3 text-center cursor-pointer shadow-md transition-all ${activeTab === p ? 'ring-4 ring-white/60 scale-105' : ''}`}
               >
                 <p className="text-white font-black text-3xl">{byPriority[p].length}</p>
-                <p className="text-white/90 text-[10px] font-bold leading-tight px-1">{cfg.label}</p>
+                <p className="text-white/90 text-[10px] font-bold leading-tight px-1">{PRIORITY_LABELS[p].zoneName}</p>
               </motion.div>
             );
           })}
@@ -79,7 +81,7 @@ export default function ResultsPage({ onReset }: Props) {
 
         {/* Total */}
         <div className="glass rounded-2xl p-3 mb-4 flex items-center justify-between">
-          <span className="text-gray-600 text-sm">סה"כ נבחרו</span>
+          <span className="text-gray-600 text-sm">{RESULTS_TEXT.totalSelected}</span>
           <span className="font-black text-2xl text-gray-900">{selected.length}</span>
         </div>
 
@@ -87,23 +89,23 @@ export default function ResultsPage({ onReset }: Props) {
         <div className="glass rounded-2xl p-4 mb-4">
           {demoMode ? (
             <p className="text-gray-500 text-sm text-center">
-              <strong>מצב דמו</strong> — התחבר עם Google לייצוא ל-Google Sheets
+              <strong>{RESULTS_TEXT.demo.label}</strong> — {RESULTS_TEXT.demo.text}
             </p>
           ) : isSyncing ? (
             <div className="flex items-center gap-3">
               <div className="w-5 h-5 border-2 border-[#FF2D78] border-t-transparent rounded-full animate-spin" />
-              <span className="text-gray-600 text-sm">מסנכרן עם Google Sheets...</span>
+              <span className="text-gray-600 text-sm">{RESULTS_TEXT.sync.syncing}</span>
             </div>
           ) : sheetUrl ? (
             <div>
-              <p className="text-green-600 font-bold text-sm mb-2">הנתונים סונכרנו בהצלחה</p>
+              <p className="text-green-600 font-bold text-sm mb-2">{RESULTS_TEXT.sync.success}</p>
               <a
                 href={sheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full gradient-pink text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center hover:opacity-90 transition-opacity"
               >
-                פתח Google Sheets
+                {RESULTS_TEXT.sync.openSheets}
               </a>
             </div>
           ) : error ? (
@@ -116,25 +118,25 @@ export default function ResultsPage({ onReset }: Props) {
                   setIsSyncing(true);
                   syncApprovedTab(user.accessToken, spreadsheetId, selected)
                     .then(() => setSheetUrl(getSpreadsheetUrl(spreadsheetId)))
-                    .catch(() => setError('שגיאה בסנכרון. נסה שוב.'))
+                    .catch(() => setError(RESULTS_TEXT.sync.error))
                     .finally(() => setIsSyncing(false));
                 }}
                 className="gradient-pink text-white font-bold py-2 px-4 rounded-xl text-sm"
               >
-                נסה שוב
+                {RESULTS_TEXT.sync.retry}
               </button>
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">לא נמצא Google Sheet. התחל סשן חדשה לחיבור.</p>
+            <p className="text-gray-500 text-sm">{RESULTS_TEXT.sync.noSheet}</p>
           )}
         </div>
 
         {/* Tab filter */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          <TabChip label="הכל" count={selected.length} active={activeTab === 'all'} onClick={() => setActiveTab('all')} />
-          <TabChip label="טופס בטוח" count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-green-100 text-green-700" />
-          <TabChip label="סיכוי טוב" count={byPriority.medium.length} active={activeTab === 'medium'} onClick={() => setActiveTab('medium')} color="bg-lime-100 text-lime-700" />
-          <TabChip label="דרושה עבודה" count={byPriority.low.length} active={activeTab === 'low'} onClick={() => setActiveTab('low')} color="bg-yellow-100 text-yellow-700" />
+          <TabChip label={RESULTS_TEXT.tabs.all} count={selected.length} active={activeTab === 'all'} onClick={() => setActiveTab('all')} />
+          <TabChip label={PRIORITY_LABELS.high.zoneName} count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-green-100 text-green-700" />
+          <TabChip label={PRIORITY_LABELS.medium.zoneName} count={byPriority.medium.length} active={activeTab === 'medium'} onClick={() => setActiveTab('medium')} color="bg-lime-100 text-lime-700" />
+          <TabChip label={PRIORITY_LABELS.low.zoneName} count={byPriority.low.length} active={activeTab === 'low'} onClick={() => setActiveTab('low')} color="bg-yellow-100 text-yellow-700" />
         </div>
 
         {/* Contact list */}
@@ -157,7 +159,7 @@ export default function ResultsPage({ onReset }: Props) {
                   {!contact.phone && contact.email && <p className="text-xs text-gray-500 truncate">{contact.email}</p>}
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-bold ${cfg.bgLight} ${cfg.textColor}`}>
-                  {cfg.label}
+                  {PRIORITY_LABELS[contact.priority].zoneName}
                 </span>
               </motion.div>
             );
@@ -169,7 +171,7 @@ export default function ResultsPage({ onReset }: Props) {
             <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
               <span className="text-white/60 text-2xl font-black">—</span>
             </div>
-            <p className="text-white/70">לא נבחרו אנשי קשר</p>
+            <p className="text-white/70">{RESULTS_TEXT.emptyState}</p>
           </div>
         )}
 
@@ -179,7 +181,7 @@ export default function ResultsPage({ onReset }: Props) {
             onClick={handleReset}
             className="glass text-gray-600 font-bold py-3 px-6 rounded-2xl text-sm hover:bg-white/80 transition-all"
           >
-            התחל מחדש
+            {RESULTS_TEXT.restart}
           </button>
         </div>
       </div>

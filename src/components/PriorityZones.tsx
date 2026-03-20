@@ -1,41 +1,33 @@
 import { useState } from 'react';
 import { motion, MotionValue, useMotionValueEvent } from 'framer-motion';
+import type { Priority } from '../types/contact';
+import { PRIORITY_LABELS } from '../config/labels';
 
 interface Props {
   dragX: MotionValue<number>;
   dragY: MotionValue<number>;
 }
 
-type Priority = 'high' | 'medium' | 'low';
-
 const ZONES: {
   priority: Priority;
-  label: string;
-  hint: string;
   glowClass: string;
   bgClass: string;
   roundedClass: string;
 }[] = [
   {
     priority: 'high',
-    label: 'טופס בטוח',
-    hint: '↑',
     glowClass: 'zone-glow-high',
     bgClass: 'gradient-high',
     roundedClass: 'rounded-tr-2xl',
   },
   {
     priority: 'medium',
-    label: 'סיכוי טוב',
-    hint: '→',
     glowClass: 'zone-glow-medium',
     bgClass: 'gradient-medium',
     roundedClass: '',
   },
   {
     priority: 'low',
-    label: 'דרושה עבודה',
-    hint: '↓',
     glowClass: 'zone-glow-low',
     bgClass: 'gradient-low',
     roundedClass: 'rounded-br-2xl',
@@ -66,7 +58,8 @@ export default function PriorityZones({ dragX, dragY }: Props) {
 
   return (
     <motion.div
-      className="absolute right-0 top-0 bottom-0 flex flex-col pointer-events-none z-[45]"
+      className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col pointer-events-none"
+      style={{ height: '60vh', zIndex: 60 }}
       initial={{ x: 150, opacity: 0 }}
       animate={{ x: isVisible ? 0 : 150, opacity: isVisible ? 1 : 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 28 }}
@@ -81,15 +74,15 @@ export default function PriorityZones({ dragX, dragY }: Props) {
             }}
             transition={{ duration: 0.12 }}
             className={`
-              flex-1 flex flex-col items-center justify-center
+              flex-1 flex flex-col items-center justify-center relative
               w-24 text-white shadow-xl
               ${zone.bgClass}
               ${zone.roundedClass}
               ${isActive ? zone.glowClass : ''}
             `}
           >
-            <span className="text-xs font-black text-center leading-tight px-1">{zone.label}</span>
-            <span className="text-sm font-bold mt-0.5 text-white/80">{zone.hint}</span>
+            <span className="text-xs font-black text-center leading-tight px-1">{PRIORITY_LABELS[zone.priority].zoneName}</span>
+            <span className="text-sm font-bold mt-0.5 text-white/80">{PRIORITY_LABELS[zone.priority].hint}</span>
             {isActive && (
               <motion.div
                 layoutId="zone-indicator"

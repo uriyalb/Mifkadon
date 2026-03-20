@@ -3,6 +3,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { mockContacts } from '../data/mockContacts';
+import { LOGIN_TEXT } from '../config/textLogin';
 
 interface Props {
   onLogin: () => void;
@@ -38,17 +39,17 @@ export default function LoginPage({ onLogin }: Props) {
         );
         onLogin();
       } catch {
-        setError('שגיאה בהתחברות. נסה שוב.');
+        setError(LOGIN_TEXT.errors.generic);
       } finally {
         setIsLoading(false);
       }
     },
     onError: () => {
-      setError('ההתחברות נכשלה. נסה שוב.');
+      setError(LOGIN_TEXT.errors.failed);
       setIsLoading(false);
     },
     onNonOAuthError: () => {
-      setError('חלון ההתחברות נחסם או נסגר. נסה שוב.');
+      setError(LOGIN_TEXT.errors.blocked);
       setIsLoading(false);
     },
   });
@@ -67,28 +68,21 @@ export default function LoginPage({ onLogin }: Props) {
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           className="w-24 h-24 rounded-3xl gradient-pink mx-auto mb-6 flex items-center justify-center shadow-2xl"
         >
-          <span className="text-5xl font-black text-white">מ</span>
+          <span className="text-5xl font-black text-white">{LOGIN_TEXT.logo}</span>
         </motion.div>
 
-        <h1 className="text-4xl font-black text-white mb-2 drop-shadow-lg">מיפקדון</h1>
-        <p className="text-white/90 text-lg mb-2 font-medium">מיין את אנשי הקשר שלך</p>
-        <p className="text-white/70 text-sm mb-10 leading-relaxed">
-          גלול דרך אנשי הקשר שלך, החלק ימינה לשמירה לקמפיין
-          <br />
-          והחלק שמאלה לדילוג. הכול נשמר ב-Google Drive שלך בלבד.
+        <h1 className="text-4xl font-black text-white mb-2 drop-shadow-lg">{LOGIN_TEXT.title}</h1>
+        <p className="text-white/90 text-lg mb-2 font-medium">{LOGIN_TEXT.subtitle}</p>
+        <p className="text-white/70 text-sm mb-10 leading-relaxed whitespace-pre-line">
+          {LOGIN_TEXT.description}
         </p>
 
         {/* Features */}
         <div className="glass rounded-2xl p-4 mb-6 text-right space-y-2.5">
-          {[
-            { text: 'המידע נשמר רק ב-Google Drive האישי שלך' },
-            { text: 'ייבוא מ-Google Contacts, פייסבוק ואינסטגרם' },
-            { text: 'ממשק החלקה כמו אפליקציית היכרויות' },
-            { text: 'סיווג לפי עדיפות: ניצחון מהיר, סיכוי טוב, דרושה עבודה' },
-          ].map((item) => (
-            <div key={item.text} className="flex items-center gap-3">
+          {LOGIN_TEXT.features.map((text) => (
+            <div key={text} className="flex items-center gap-3">
               <span className="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0" />
-              <span className="text-gray-700 text-sm">{item.text}</span>
+              <span className="text-gray-700 text-sm">{text}</span>
             </div>
           ))}
         </div>
@@ -105,7 +99,7 @@ export default function LoginPage({ onLogin }: Props) {
           onClick={() => {
             setIsLoading(true);
             setError(null);
-            try { login(); } catch { setError('שגיאה בפתיחת חלון ההתחברות.'); setIsLoading(false); }
+            try { login(); } catch { setError(LOGIN_TEXT.errors.popupFailed); setIsLoading(false); }
           }}
           disabled={isLoading}
           className="w-full bg-white text-gray-700 font-bold py-4 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-3 text-base disabled:opacity-60 transition-all"
@@ -120,12 +114,12 @@ export default function LoginPage({ onLogin }: Props) {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
           )}
-          {isLoading ? 'מתחבר...' : 'התחבר עם Google'}
+          {isLoading ? LOGIN_TEXT.loginButtonLoading : LOGIN_TEXT.loginButton}
         </motion.button>
 
         <div className="relative my-4 flex items-center gap-3">
           <div className="flex-1 h-px bg-white/20" />
-          <span className="text-white/40 text-xs">או</span>
+          <span className="text-white/40 text-xs">{LOGIN_TEXT.or}</span>
           <div className="flex-1 h-px bg-white/20" />
         </div>
 
@@ -135,13 +129,11 @@ export default function LoginPage({ onLogin }: Props) {
           onClick={() => { enterDemoMode(); onLogin(); }}
           className="w-full glass text-gray-700 font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2 text-sm"
         >
-          ▶ הפעל דמו — {mockContacts.length} אנשי קשר לדוגמה
+          {LOGIN_TEXT.demoButton(mockContacts.length)}
         </motion.button>
 
-        <p className="text-white/50 text-xs mt-4 leading-relaxed">
-          בהתחברות, האפליקציה מבקשת גישה לאנשי הקשר ו-Google Sheets שלך.
-          <br />
-          הנתונים לא נשמרים בשום שרת חיצוני.
+        <p className="text-white/50 text-xs mt-4 leading-relaxed whitespace-pre-line">
+          {LOGIN_TEXT.disclaimer}
         </p>
       </motion.div>
     </div>
