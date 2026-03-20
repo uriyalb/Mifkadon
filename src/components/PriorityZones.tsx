@@ -8,30 +8,37 @@ interface Props {
 
 type Priority = 'high' | 'medium' | 'low';
 
-const ZONES: { priority: Priority; label: string; hint: string; colorClass: string; glowClass: string; bgClass: string }[] = [
+const ZONES: {
+  priority: Priority;
+  label: string;
+  hint: string;
+  glowClass: string;
+  bgClass: string;
+  roundedClass: string;
+}[] = [
   {
     priority: 'high',
     label: 'טופס בטוח',
-    hint: '↑ בטוח',
-    colorClass: 'text-green-600',
+    hint: '↑',
     glowClass: 'zone-glow-high',
     bgClass: 'gradient-high',
+    roundedClass: 'rounded-tr-2xl',
   },
   {
     priority: 'medium',
     label: 'סיכוי טוב',
-    hint: 'ישר',
-    colorClass: 'text-lime-600',
+    hint: '→',
     glowClass: 'zone-glow-medium',
     bgClass: 'gradient-medium',
+    roundedClass: '',
   },
   {
     priority: 'low',
     label: 'דרושה עבודה',
-    hint: '↓ נמוך',
-    colorClass: 'text-yellow-600',
+    hint: '↓',
     glowClass: 'zone-glow-low',
     bgClass: 'gradient-low',
+    roundedClass: 'rounded-br-2xl',
   },
 ];
 
@@ -59,10 +66,10 @@ export default function PriorityZones({ dragX, dragY }: Props) {
 
   return (
     <motion.div
-      className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-2 justify-center pointer-events-none z-[45]"
+      className="absolute right-0 top-0 bottom-0 flex flex-col pointer-events-none z-[45]"
       initial={{ x: 150, opacity: 0 }}
-      animate={{ x: isVisible ? -16 : 150, opacity: isVisible ? 1 : 0 }}
-      transition={{ type: 'spring', stiffness: 220, damping: 30 }}
+      animate={{ x: isVisible ? 0 : 150, opacity: isVisible ? 1 : 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 28 }}
     >
       {ZONES.map((zone) => {
         const isActive = activePriority === zone.priority;
@@ -70,25 +77,26 @@ export default function PriorityZones({ dragX, dragY }: Props) {
           <motion.div
             key={zone.priority}
             animate={{
-              scale: isActive ? 1.18 : 0.88,
-              opacity: isActive ? 1 : 0.35,
+              opacity: isActive ? 1 : 0.3,
             }}
-            transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+            transition={{ duration: 0.12 }}
             className={`
-              relative flex flex-col items-center justify-center
-              w-20 h-16 rounded-2xl text-white shadow-xl
+              flex-1 flex flex-col items-center justify-center
+              w-24 text-white shadow-xl
               ${zone.bgClass}
+              ${zone.roundedClass}
               ${isActive ? zone.glowClass : ''}
             `}
           >
-            <span className="text-[11px] font-black text-center leading-tight px-1">{zone.label}</span>
-            <span className="text-[9px] font-semibold mt-0.5 text-white/70">{zone.hint}</span>
+            <span className="text-xs font-black text-center leading-tight px-1">{zone.label}</span>
+            <span className="text-sm font-bold mt-0.5 text-white/80">{zone.hint}</span>
             {isActive && (
               <motion.div
                 layoutId="zone-indicator"
-                className="absolute inset-0 rounded-2xl border-2 border-white/70"
+                className={`absolute inset-0 border-2 border-white/70 ${zone.roundedClass}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                transition={{ duration: 0.1 }}
               />
             )}
           </motion.div>
