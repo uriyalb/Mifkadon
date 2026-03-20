@@ -14,7 +14,7 @@ interface Props {
 }
 
 const SWIPE_THRESHOLD = 50;
-const PRIORITY_THRESHOLD = 80;
+const PRIORITY_THRESHOLD = 50;
 
 function getPriority(y: number): Priority {
   if (y < -PRIORITY_THRESHOLD) return 'high';
