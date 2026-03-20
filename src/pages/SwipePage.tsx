@@ -379,39 +379,37 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       {/* Action buttons */}
       {chapterPhase === 'swiping' && (
         <div className="shrink-0 px-4 pb-2 flex flex-col items-center gap-3">
-          {/* Priority picker — appears above action buttons */}
-          <AnimatePresence>
-            {showPriorityPicker && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className="flex items-center gap-2 w-full max-w-[340px] justify-center"
-                dir="ltr"
-              >
-                {([
-                  { priority: 'high' as Priority, label: 'גבוהה', bg: 'linear-gradient(135deg, #22C55E, #4ADE80)' },
-                  { priority: 'medium' as Priority, label: 'בינונית', bg: 'linear-gradient(135deg, #84CC16, #BEF264)' },
-                  { priority: 'low' as Priority, label: 'נמוכה', bg: 'linear-gradient(135deg, #EAB308, #FDE047)' },
-                ]).map((p, i) => (
-                  <motion.button
-                    key={p.priority}
-                    initial={{ opacity: 0, y: 15, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: i * 0.05, type: 'spring', stiffness: 400, damping: 22 }}
-                    onClick={() => pickPriority(p.priority)}
-                    className="flex-1 h-11 rounded-xl text-white font-bold text-sm shadow-lg active:scale-95 transition-transform"
-                    style={{ background: p.bg }}
-                  >
-                    {p.label}
-                  </motion.button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="relative w-full max-w-[340px]">
+            {/* Priority picker — floats above buttons, no layout shift */}
+            <AnimatePresence>
+              {showPriorityPicker && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute bottom-full left-0 right-0 mb-2 flex items-center gap-2 justify-center"
+                  dir="ltr"
+                >
+                  {([
+                    { priority: 'high' as Priority, label: 'גבוהה', bg: 'linear-gradient(135deg, #22C55E, #4ADE80)' },
+                    { priority: 'medium' as Priority, label: 'בינונית', bg: 'linear-gradient(135deg, #84CC16, #BEF264)' },
+                    { priority: 'low' as Priority, label: 'נמוכה', bg: 'linear-gradient(135deg, #EAB308, #FDE047)' },
+                  ]).map((p) => (
+                    <button
+                      key={p.priority}
+                      onClick={() => pickPriority(p.priority)}
+                      className="flex-1 h-11 rounded-xl text-white font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                      style={{ background: p.bg }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          <div className="flex items-center gap-3 w-full max-w-[340px]" dir="ltr">
+            <div className="flex items-center gap-3" dir="ltr">
             {/* Skip — left side matches left-swipe */}
             <button
               onClick={() => { dismissPicker(); canAct && handleSwipeLeft(remaining[0]); }}
@@ -441,6 +439,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               <span>שמור</span>
               <span className="text-xl leading-none">✓</span>
             </button>
+          </div>
           </div>
 
           {/* Back link */}
