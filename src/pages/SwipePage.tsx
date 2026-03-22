@@ -269,12 +269,12 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     setShowPriorityPicker(true);
     if (pickerTimerRef.current !== null) clearTimeout(pickerTimerRef.current);
     pickerTimerRef.current = setTimeout(() => {
-      // Auto-dismiss after 3s, default to medium
+      // Auto-dismiss after 5s, default to medium
       setShowPriorityPicker((prev) => {
         if (prev && remaining.length > 0) handleSwipeRight(remaining[0], 'medium');
         return false;
       });
-    }, 3000);
+    }, 5000);
   }, [canAct, remaining, handleSwipeRight]);
 
   const pickPriority = useCallback((priority: Priority) => {
@@ -389,24 +389,35 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             <AnimatePresence>
               {showPriorityPicker && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute bottom-full left-0 right-0 mb-2 flex items-center gap-2 justify-center"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full left-0 right-0 mb-2 flex flex-col gap-1.5"
                   style={{ zIndex: 55 }}
                   dir="ltr"
                 >
-                  {(['high', 'medium', 'low'] as Priority[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => pickPriority(p)}
-                      className="flex-1 h-11 rounded-xl text-white font-bold text-sm shadow-lg active:scale-95 transition-transform"
-                      style={{ background: PRIORITY_LABELS[p].bg }}
-                    >
-                      {PRIORITY_LABELS[p].text}
-                    </button>
-                  ))}
+                  <div className="flex items-center gap-2 justify-center">
+                    {(['high', 'medium', 'low'] as Priority[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => pickPriority(p)}
+                        className="flex-1 h-12 rounded-xl text-white font-bold shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center"
+                        style={{ background: PRIORITY_LABELS[p].bg }}
+                      >
+                        <span className="text-sm leading-tight">{PRIORITY_LABELS[p].zoneName}</span>
+                        <span className="text-[10px] opacity-75 leading-tight">{PRIORITY_LABELS[p].text}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {/* Countdown bar — shrinks over 5s */}
+                  <motion.div
+                    className="h-0.5 mx-4 rounded-full bg-white/50"
+                    initial={{ scaleX: 1 }}
+                    animate={{ scaleX: 0 }}
+                    transition={{ duration: 5, ease: 'linear' }}
+                    style={{ transformOrigin: 'right' }}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

@@ -12,10 +12,10 @@ export const DIFFICULTY_LABELS: Record<Difficulty, { text: string; color: string
   hard:   { text: 'קשה',    color: '#EF4444', bg: 'linear-gradient(135deg, #EF4444, #F87171)' },
 };
 
-export const PRIORITY_LABELS: Record<Priority, { text: string; zoneName: string; bg: string; hint: string }> = {
-  high:   { text: 'גבוהה',  zoneName: 'טופס בטוח',  bg: 'linear-gradient(135deg, #22C55E, #4ADE80)', hint: '↑' },
-  medium: { text: 'בינונית', zoneName: 'סיכוי טוב',  bg: 'linear-gradient(135deg, #84CC16, #BEF264)', hint: '→' },
-  low:    { text: 'נמוכה',  zoneName: 'דרושה עבודה', bg: 'linear-gradient(135deg, #EAB308, #FDE047)', hint: '↓' },
+export const PRIORITY_LABELS: Record<Priority, { text: string; zoneName: string; bg: string; hint: string; color: string; overlayBg: string }> = {
+  high:   { text: 'גבוהה',  zoneName: 'טופס בטוח',  bg: 'linear-gradient(135deg, #22C55E, #4ADE80)', hint: '↑', color: '#22C55E', overlayBg: 'rgba(34,197,94,0.22)' },
+  medium: { text: 'בינונית', zoneName: 'סיכוי טוב',  bg: 'linear-gradient(135deg, #84CC16, #BEF264)', hint: '→', color: '#84CC16', overlayBg: 'rgba(132,204,22,0.22)' },
+  low:    { text: 'נמוכה',  zoneName: 'דרושה עבודה', bg: 'linear-gradient(135deg, #EAB308, #FDE047)', hint: '↓', color: '#EAB308', overlayBg: 'rgba(234,179,8,0.22)' },
 };
 
 export const SOURCE_LABELS: Record<string, string> = {

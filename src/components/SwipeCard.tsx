@@ -1,9 +1,11 @@
 
-import { motion, MotionValue, useTransform, animate } from 'framer-motion';
+import { useState } from 'react';
+import { motion, MotionValue, useTransform, useMotionValueEvent, animate } from 'framer-motion';
 import type { Contact, Priority } from '../types/contact';
 import ContactAvatar from './ContactAvatar';
-import { SOURCE_LABELS } from '../config/labels';
+import { SOURCE_LABELS, PRIORITY_LABELS } from '../config/labels';
 import { SWIPE_TEXT } from '../config/textSwipe';
+import { SWIPE_THRESHOLD, ZONE_REVEAL_THRESHOLD, getPriority } from '../config/swipeThresholds';
 
 interface Props {
   contact: Contact;
@@ -15,16 +17,9 @@ interface Props {
   stackIndex: number; // 0 = top (draggable), 1 = behind, 2 = further
 }
 
-const SWIPE_THRESHOLD = 50;
-const PRIORITY_THRESHOLD = 50;
-
-function getPriority(y: number): Priority {
-  if (y < -PRIORITY_THRESHOLD) return 'high';
-  if (y > PRIORITY_THRESHOLD) return 'low';
-  return 'medium';
-}
-
 export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipeLeft, isTop, stackIndex }: Props) {
+  const [activePriority, setActivePriority] = useState<Priority>('medium');
+
   const rotate = useTransform(dragX, [-300, 0, 300], [-18, 0, 18]);
 
   // Keep overlay: appears when dragging right
@@ -41,6 +36,23 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
   // Commitment ring opacities — appear right as threshold is crossed
   const rightRingOpacity = useTransform(dragX, [50, 100], [0, 1]);
   const leftRingOpacity = useTransform(dragX, [-100, -50], [1, 0]);
+
+  // Track priority from vertical drag position
+  useMotionValueEvent(dragY, 'change', (y) => {
+    if (dragX.get() > ZONE_REVEAL_THRESHOLD) {
+      const p = getPriority(y);
+      if (p !== activePriority) {
+        setActivePriority(p);
+      }
+    }
+  });
+
+  // Reset priority when drag returns to center
+  useMotionValueEvent(dragX, 'change', (x) => {
+    if (x <= ZONE_REVEAL_THRESHOLD) {
+      setActivePriority('medium');
+    }
+  });
 
   const scale = stackIndex === 0 ? 1 : stackIndex === 1 ? 0.95 : 0.9;
   const translateY = stackIndex === 0 ? 0 : stackIndex === 1 ? 12 : 22;
@@ -76,6 +88,9 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
     }
   };
 
+  const priorityColor = PRIORITY_LABELS[activePriority].color;
+  const priorityOverlayBg = PRIORITY_LABELS[activePriority].overlayBg;
+
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center no-select"
@@ -92,12 +107,12 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
         className="w-[340px] max-w-[90vw] bg-white rounded-3xl card-shadow overflow-hidden cursor-grab active:cursor-grabbing"
         whileTap={isTop ? { cursor: 'grabbing' } : {}}
       >
-        {/* Commitment ring — pink glow (keep) */}
+        {/* Commitment ring — color matches priority when keeping */}
         {isTop && (
           <motion.div
             style={{
               opacity: rightRingOpacity,
-              boxShadow: '0 0 0 3px #FF2D78, 0 0 20px rgba(255,45,120,0.65), 0 0 44px rgba(255,45,120,0.35)',
+              boxShadow: `0 0 0 3px ${priorityColor}, 0 0 20px ${priorityOverlayBg}, 0 0 44px ${priorityOverlayBg}`,
             }}
             className="absolute inset-0 rounded-3xl pointer-events-none z-10"
           />
@@ -113,15 +128,43 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
           />
         )}
 
-        {/* Keep overlay */}
+        {/* Keep overlay — priority-aware with dynamic color */}
         {isTop && (
           <motion.div
             style={{ opacity: keepOpacity }}
-            className="absolute inset-0 rounded-3xl z-20 flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 rounded-3xl z-20 flex flex-col items-center justify-center pointer-events-none"
           >
-            <div className="absolute inset-0 bg-[#FF2D78]/20 rounded-3xl" />
-            <div className="rotate-[-20deg] border-4 border-[#FF2D78] rounded-2xl px-6 py-2 z-30">
-              <span className="text-[#FF2D78] font-black text-3xl tracking-widest">{SWIPE_TEXT.overlays.keep}</span>
+            {/* Background tint — color driven by active priority */}
+            <motion.div
+              className="absolute inset-0 rounded-3xl"
+              animate={{ backgroundColor: priorityOverlayBg }}
+              transition={{ duration: 0.15 }}
+            />
+            {/* Label: "שמור" + priority name with zone-change pulse */}
+            <div
+              className="rotate-[-20deg] border-4 rounded-2xl px-6 py-2 z-30"
+              style={{ borderColor: priorityColor }}
+            >
+              <motion.span
+                key={activePriority}
+                initial={{ scale: 1.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                className="font-black text-3xl tracking-widest block text-center"
+                style={{ color: priorityColor }}
+              >
+                {SWIPE_TEXT.overlays.keep}
+              </motion.span>
+              <motion.span
+                key={`sub-${activePriority}`}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15 }}
+                className="text-base font-bold block text-center mt-0.5"
+                style={{ color: priorityColor }}
+              >
+                {PRIORITY_LABELS[activePriority].text} {PRIORITY_LABELS[activePriority].hint}
+              </motion.span>
             </div>
           </motion.div>
         )}
