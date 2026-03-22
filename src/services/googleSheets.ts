@@ -187,6 +187,7 @@ export async function flushContactRowUpdates(
   const timestamp = new Date().toLocaleString('he-IL');
   const data = batch.map((u) => ({
     range: `'${TAB1}'!F${u.rowIndex + 1}:H${u.rowIndex + 1}`,
+    majorDimension: 'ROWS',
     values: [[
       u.status,
       u.priority ? PRIORITY_LABEL[u.priority] : '',
@@ -202,7 +203,11 @@ export async function flushContactRowUpdates(
       body: JSON.stringify({ valueInputOption: 'RAW', data }),
     }
   );
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    const msg = (body as { error?: { message?: string } }).error?.message ?? '';
+    throw new Error(`HTTP ${resp.status}${msg ? ': ' + msg : ''}`);
+  }
 }
 
 /** Force-flush any remaining queued updates (e.g. on chapter complete / unmount). */
@@ -681,8 +686,12 @@ export function syncTrackingSheet(
   lastTrackingSyncTs = now;
 
   // Fire both syncs in parallel, don't await
-  syncTrackingContacts(accessToken, trackingSheetId, approved).catch(() => {});
-  syncTrackingSummary(accessToken, trackingSheetId, stats).catch(() => {});
+  syncTrackingContacts(accessToken, trackingSheetId, approved).catch((e) => {
+    console.warn('[sync] trackingContacts failed:', e);
+  });
+  syncTrackingSummary(accessToken, trackingSheetId, stats).catch((e) => {
+    console.warn('[sync] trackingSummary failed:', e);
+  });
 }
 
 // ─── Rebuild contacts tab on tracking sheet ──────────────────────────────────
