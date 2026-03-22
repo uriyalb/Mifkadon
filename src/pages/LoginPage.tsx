@@ -54,7 +54,7 @@ export default function LoginPage({ onLogin }: Props) {
   });
 
   return (
-    <div className="h-[100dvh] flex flex-col items-center justify-center p-6" dir="rtl" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
+    <div className="h-[100dvh] flex flex-col items-center justify-center p-6" dir="rtl" style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}>
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin }: Props) {
         <div className="glass rounded-2xl p-4 mb-6 text-right space-y-2.5">
           {LOGIN_TEXT.features.map((text) => (
             <div key={text} className="flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
               <span className="text-gray-700 text-sm">{text}</span>
             </div>
           ))}

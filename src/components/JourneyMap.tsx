@@ -234,8 +234,8 @@ export default function JourneyMap({ completedChapter, cities, onContinue, isLas
         onClick={onContinue}
         className="mt-4 px-8 py-3 rounded-2xl text-white font-bold text-base shadow-xl"
         style={{
-          background: 'linear-gradient(135deg, #FF2D78, #FF6BA8)',
-          boxShadow: '0 8px 32px rgba(255, 45, 120, 0.4)',
+          background: 'linear-gradient(135deg, #E53935, #EF5350)',
+          boxShadow: '0 8px 32px rgba(229, 57, 53, 0.4)',
           pointerEvents: ilanArrived ? 'auto' : 'none',
         }}
       >

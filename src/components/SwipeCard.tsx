@@ -242,7 +242,7 @@ export default function SwipeCard({ contact, dragX, dragY, onSwipeRight, onSwipe
         )}
 
         {/* Photo banner */}
-        <div className="h-52 bg-gradient-to-br from-pink-100 to-rose-50 flex items-center justify-center relative overflow-hidden">
+        <div className="h-52 bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10" />
           <ContactAvatar name={contact.name} photoUrl={contact.photoUrl} size="xl" source={contact.source} />
         </div>

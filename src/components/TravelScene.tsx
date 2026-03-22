@@ -159,7 +159,7 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
             className="h-full rounded-full transition-all duration-300"
             style={{
               width: `${clampedPct}%`,
-              background: 'linear-gradient(90deg, #FF2D78, #FFD700)',
+              background: 'linear-gradient(90deg, #E53935, #FFD700)',
             }}
           />
         </div>

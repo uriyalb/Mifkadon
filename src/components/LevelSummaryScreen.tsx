@@ -253,8 +253,8 @@ export default function LevelSummaryScreen({
         onClick={onNext}
         className="px-10 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-shadow hover:shadow-2xl"
         style={{
-          background: 'linear-gradient(135deg, #FF2D78, #FF6BA8)',
-          boxShadow: '0 8px 32px rgba(255, 45, 120, 0.4)',
+          background: 'linear-gradient(135deg, #E53935, #EF5350)',
+          boxShadow: '0 8px 32px rgba(229, 57, 53, 0.4)',
         }}
       >
         {isLastChapter ? JOURNEY_TEXT.nextButton.results : JOURNEY_TEXT.nextButton.map}

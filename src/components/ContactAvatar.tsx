@@ -15,12 +15,12 @@ const SIZE_CLASSES = {
 };
 
 const AVATAR_COLORS = [
-  'from-pink-400 to-rose-500',
+  'from-red-400 to-red-600',
   'from-purple-400 to-violet-500',
   'from-blue-400 to-indigo-500',
   'from-teal-400 to-emerald-500',
   'from-orange-400 to-amber-500',
-  'from-fuchsia-400 to-pink-500',
+  'from-rose-400 to-red-500',
 ];
 
 const SOURCE_BADGE: Record<string, string> = {

@@ -121,7 +121,7 @@ export default function ResultsPage({ onReset }: Props) {
             </p>
           ) : isSyncing ? (
             <div className="flex items-center gap-3">
-              <div className="w-5 h-5 border-2 border-[#FF2D78] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#E53935] border-t-transparent rounded-full animate-spin" />
               <span className="text-gray-600 text-sm">{RESULTS_TEXT.sync.syncing}</span>
             </div>
           ) : sheetUrl ? (
@@ -218,7 +218,7 @@ export default function ResultsPage({ onReset }: Props) {
   );
 }
 
-function TabChip({ label, count, active, onClick, color = 'bg-pink-100 text-[#FF2D78]' }: {
+function TabChip({ label, count, active, onClick, color = 'bg-red-100 text-[#E53935]' }: {
   label: string;
   count: number;
   active: boolean;
