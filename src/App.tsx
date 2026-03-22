@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { SessionProvider, useSession, SESSION_DATA_KEY } from './context/SessionContext'
+import { SessionProvider, useSession, SESSION_DATA_KEY, SPREADSHEET_KEY } from './context/SessionContext'
 import LoginPage from './pages/LoginPage'
 import ImportPage from './pages/ImportPage'
 import SwipePage from './pages/SwipePage'
 import ResultsPage from './pages/ResultsPage'
+import TutorialModal from './components/TutorialModal'
+import WalkthroughOverlay from './components/WalkthroughOverlay'
 import { mockContacts } from './data/mockContacts'
 
 export type AppPage = 'login' | 'import' | 'swipe' | 'results'
@@ -36,6 +38,9 @@ function DemoAutoStart({ onStart }: { onStart: () => void }) {
 function AppRouter() {
   const { user, isLoading, demoMode } = useAuth()
   const [page, setPage] = useState<AppPage>('login')
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [walkthroughActive, setWalkthroughActive] = useState(false)
+  const tutorialShownRef = useRef(false)
 
   useEffect(() => {
     if (user && page === 'login') {
@@ -46,6 +51,17 @@ function AppRouter() {
       setPage('login')
     }
   }, [user])
+
+  // Auto-show tutorial for first-time users when entering the swipe page
+  useEffect(() => {
+    if (page === 'swipe' && !tutorialShownRef.current) {
+      tutorialShownRef.current = true;
+      const isFirstLaunch = !localStorage.getItem(SPREADSHEET_KEY);
+      if (isFirstLaunch) {
+        setShowTutorial(true);
+      }
+    }
+  }, [page]);
 
   if (isLoading) {
     return (
@@ -66,15 +82,32 @@ function AppRouter() {
           ? <DemoAutoStart onStart={() => setPage('swipe')} />
           : <ImportPage onStart={() => setPage('swipe')} />
       )}
-      {page === 'swipe' && (
+      {page === 'swipe' && !walkthroughActive && (
         <SwipePage
           onFinish={() => setPage('results')}
           onBack={() => setPage('import')}
+          onOpenTutorial={() => setShowTutorial(true)}
+        />
+      )}
+      {walkthroughActive && (
+        <WalkthroughOverlay
+          onComplete={() => {
+            setWalkthroughActive(false);
+          }}
         />
       )}
       {page === 'results' && (
         <ResultsPage onReset={() => setPage('import')} />
       )}
+
+      <TutorialModal
+        open={showTutorial}
+        onStartWalkthrough={() => {
+          setShowTutorial(false);
+          setWalkthroughActive(true);
+        }}
+        onSkip={() => setShowTutorial(false)}
+      />
     </SessionProvider>
   )
 }
