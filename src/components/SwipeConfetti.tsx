@@ -6,55 +6,42 @@ const PARTICLE_COUNT = 100;
 
 interface Particle {
   id: number;
-  // Percentage-based start position (vw/vh)
   startVw: number;
   startVh: number;
-  // Pixel offsets for mid and end positions (relative to start)
-  midOffsetX: number;
-  midOffsetY: number;
-  endOffsetX: number;
-  endOffsetY: number;
+  targetX: number;
+  targetY: number;
   size: number;
   color: string;
   rotate: number;
   delay: number;
   duration: number;
-  round: boolean;
 }
 
 function createParticles(): Particle[] {
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-    // Spawn from left or right side
     const fromLeft = i % 2 === 0;
     const startVw = fromLeft
-      ? 5 + Math.random() * 20    // 5-25vw from left
-      : 75 + Math.random() * 20;  // 75-95vw from left
-    const startVh = 5 + Math.random() * 15; // 5-20vh from top
+      ? 10 + Math.random() * 15   // 10-25vw
+      : 75 + Math.random() * 15;  // 75-90vw
+    const startVh = 5 + Math.random() * 10; // 5-15vh
 
-    // Drift toward center
+    // Drift toward center + fall down
     const driftX = fromLeft
-      ? 30 + Math.random() * 80   // drift rightward
-      : -(30 + Math.random() * 80); // drift leftward
-    const sway = (Math.random() - 0.5) * 40;
-
-    // Float downward
-    const fallMid = 100 + Math.random() * 150;
-    const fallEnd = fallMid + 100 + Math.random() * 200;
+      ? 30 + Math.random() * 100
+      : -(30 + Math.random() * 100);
+    const fallY = 200 + Math.random() * 300;
 
     return {
       id: i,
       startVw,
       startVh,
-      midOffsetX: driftX * 0.5 + sway,
-      midOffsetY: fallMid,
-      endOffsetX: driftX + sway * 1.5,
-      endOffsetY: fallEnd,
+      targetX: driftX + (Math.random() - 0.5) * 40,
+      targetY: fallY,
       size: 5 + Math.floor(Math.random() * 7),
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       rotate: Math.random() * 540 - 270,
       delay: Math.random() * 0.5,
       duration: 1.8 + Math.random() * 1.2,
-      round: Math.random() > 0.5,
     };
   });
 }
@@ -91,36 +78,22 @@ export default function SwipeConfetti({ trigger }: Props) {
                 scale: 1,
               }}
               animate={{
-                x: [
-                  `${p.startVw}vw`,
-                  `calc(${p.startVw}vw + ${p.midOffsetX}px)`,
-                  `calc(${p.startVw}vw + ${p.endOffsetX}px)`,
-                ],
-                y: [
-                  `${p.startVh}vh`,
-                  `calc(${p.startVh}vh + ${p.midOffsetY}px)`,
-                  `calc(${p.startVh}vh + ${p.endOffsetY}px)`,
-                ],
-                opacity: [1, 1, 1, 0.7, 0],
+                x: `calc(${p.startVw}vw + ${p.targetX}px)`,
+                y: `calc(${p.startVh}vh + ${p.targetY}px)`,
+                opacity: 0,
                 rotate: p.rotate,
-                scale: [1, 1.1, 1, 0.8, 0.4],
+                scale: 0.5,
               }}
-              exit={{ opacity: 0 }}
               transition={{
                 duration: p.duration,
                 delay: p.delay,
-                ease: 'easeOut',
-                x: { duration: p.duration, times: [0, 0.4, 1], ease: 'easeInOut' },
-                y: { duration: p.duration, times: [0, 0.4, 1], ease: [0.15, 0, 0.5, 1] },
-                opacity: { duration: p.duration, times: [0, 0.08, 0.4, 0.75, 1] },
-                scale: { duration: p.duration, times: [0, 0.1, 0.4, 0.75, 1] },
+                ease: [0.25, 0.46, 0.45, 0.94],
               }}
               style={{
                 position: 'absolute',
                 width: p.size,
                 height: p.size,
                 backgroundColor: p.color,
-                borderRadius: p.round ? 1 : 0,
               }}
             />
           ))
