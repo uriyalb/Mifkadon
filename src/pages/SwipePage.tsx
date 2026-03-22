@@ -4,7 +4,10 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { Contact, Priority, ChapterStats, ContactTrackingData } from '../types/contact';
-import { updateContactRow, clearContactRow, syncTrackingSheet, loadTrackingData } from '../services/googleSheets';
+import {
+  queueContactRowUpdate, shouldFlush, flushContactRowUpdates, hasPendingUpdates,
+  clearContactRow, syncTrackingSheet, loadTrackingData,
+} from '../services/googleSheets';
 import type { TrackingStats } from '../services/googleSheets';
 import ProgressDashboard from '../components/ProgressDashboard';
 import { NUM_CHAPTERS } from '../config/chapters';
@@ -87,6 +90,17 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
   // Mid-chapter milestone tracking
   const milestoneShownRef = useRef(false);
+
+  // Elapsed seconds for ETA calculation (ticks every second)
+  const [chapterElapsed, setChapterElapsed] = useState(0);
+  useEffect(() => {
+    if (chapterPhase !== 'swiping') return;
+    setChapterElapsed(0);
+    const id = setInterval(() => {
+      setChapterElapsed(Math.round((Date.now() - chapterStartTimeRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [activeChapter, chapterPhase]);
 
   // Priority picker on keep button
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
@@ -189,6 +203,18 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     syncTrackingSheet(user.accessToken, trackingSheetId, session.selected, stats);
   }, [user, trackingSheetId, session]);
 
+  // Flush queued row updates + tracking sync when thresholds are met
+  const tryFlush = useCallback((force = false) => {
+    if (!user || !spreadsheetId) return;
+    if (!force && !shouldFlush()) return;
+    if (!force && !hasPendingUpdates()) return;
+    setSyncState('syncing');
+    flushContactRowUpdates(user.accessToken, spreadsheetId)
+      .then(() => setSyncState('idle'))
+      .catch((e) => setSyncState('error', (e as Error).message));
+    fireTrackingSync();
+  }, [user, spreadsheetId, setSyncState, fireTrackingSync]);
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
@@ -216,7 +242,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       secondsElapsed: elapsed,
     });
     setChapterPhase('summary');
-  }, [addTimeSpent]);
+    // Force-flush any remaining queued updates at chapter boundary
+    tryFlush(true);
+  }, [addTimeSpent, tryFlush]);
 
   const handleSwipeRight = useCallback((contact: Contact, priority: Priority) => {
     const rowIndex = getRowIndex(contact);
@@ -233,14 +261,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       return next;
     });
     checkMilestone();
-    if (user && spreadsheetId) {
-      setSyncState('syncing');
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, SHEET_STATUS.approved, priority)
-        .then(() => setSyncState('idle'))
-        .catch((e) => setSyncState('error', (e as Error).message));
-    }
-    fireTrackingSync();
-  }, [swipeRight, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone, fireTrackingSync]);
+    queueContactRowUpdate(rowIndex, SHEET_STATUS.approved, priority);
+    tryFlush();
+  }, [swipeRight, getRowIndex, handleChapterComplete, checkMilestone, tryFlush]);
 
   const handleSwipeLeft = useCallback((contact: Contact) => {
     const rowIndex = getRowIndex(contact);
@@ -256,14 +279,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       return next;
     });
     checkMilestone();
-    if (user && spreadsheetId) {
-      setSyncState('syncing');
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, SHEET_STATUS.rejected)
-        .then(() => setSyncState('idle'))
-        .catch((e) => setSyncState('error', (e as Error).message));
-    }
-    fireTrackingSync();
-  }, [swipeLeft, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone, fireTrackingSync]);
+    queueContactRowUpdate(rowIndex, SHEET_STATUS.rejected);
+    tryFlush();
+  }, [swipeLeft, getRowIndex, handleChapterComplete, checkMilestone, tryFlush]);
 
   const handleUndo = useCallback(() => {
     if (swipeHistory.length === 0) {
@@ -285,14 +303,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     }
 
     setRemaining((prev) => [last.contact, ...prev]);
-    if (user && spreadsheetId) {
-      setSyncState('syncing');
-      clearContactRow(user.accessToken, spreadsheetId, last.rowIndex)
-        .then(() => setSyncState('idle'))
-        .catch((e) => setSyncState('error', (e as Error).message));
-    }
-    fireTrackingSync();
-  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState, showToast, fireTrackingSync]);
+    clearContactRow(last.rowIndex);
+    tryFlush();
+  }, [swipeHistory, undoSwipe, showToast, tryFlush]);
 
   // Summary → Map (or Results for last chapter)
   const handleSummaryNext = useCallback(() => {
@@ -368,6 +381,27 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             chapterIndex={activeChapter}
             onClick={openDashboard}
           />
+
+          {/* Chapter progress stats */}
+          {(() => {
+            const left = chapterTotal - chapterSwiped;
+            const avgSec = chapterSwiped > 0 ? chapterElapsed / chapterSwiped : 0;
+            const etaSec = Math.round(avgSec * left);
+            const etaMin = Math.floor(etaSec / 60);
+            const etaSecRem = etaSec % 60;
+            const etaStr = chapterSwiped > 0
+              ? (etaMin > 0 ? `~${etaMin}:${etaSecRem.toString().padStart(2, '0')}` : `~${etaSec}s`)
+              : '—';
+            return (
+              <div className="flex items-center justify-center gap-3 mt-1 text-[10px] text-white/60 tabular-nums" dir="rtl">
+                <span>{SWIPE_TEXT.chapterProgress.sorted(chapterSwiped, chapterTotal)}</span>
+                <span className="text-white/30">|</span>
+                <span>{SWIPE_TEXT.chapterProgress.left(left)}</span>
+                <span className="text-white/30">|</span>
+                <span>{SWIPE_TEXT.chapterProgress.eta(etaStr)}</span>
+              </div>
+            );
+          })()}
         </div>
       )}
 

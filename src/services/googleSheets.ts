@@ -1,4 +1,5 @@
 import type { Contact, SelectedContact, Priority, ContactTrackingData } from '../types/contact';
+import { SYNC_CONFIG } from '../config/sync';
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
@@ -119,22 +120,96 @@ export async function initContactsTab(
   }).catch(() => {});
 }
 
-// ─── Update a contact's status/priority in Tab 1 (fire-and-forget) ──────────
-export function updateContactRow(
+// ─── Batched contact-row updates ─────────────────────────────────────────────
+//
+// Instead of one API call per swipe, updates are queued and flushed together
+// using the Sheets batchUpdate endpoint.  Flush triggers are controlled by
+// SYNC_CONFIG (keepFlushThreshold / skipFlushThreshold / minFlushIntervalMs).
+
+interface PendingRowUpdate {
+  rowIndex: number;
+  status: 'אושר' | 'נדחה' | 'ממתין';
+  priority?: string;
+}
+
+let pendingRowUpdates: PendingRowUpdate[] = [];
+let consecutiveSkips = 0;
+let keepsSinceFlush = 0;
+let lastRowFlushTs = 0;
+
+/** Queue a contact-row update (does NOT call the API). */
+export function queueContactRowUpdate(
+  rowIndex: number,
+  status: 'אושר' | 'נדחה' | 'ממתין',
+  priority?: string
+): void {
+  // If this row is already queued, replace the entry (undo then re-swipe)
+  const idx = pendingRowUpdates.findIndex((u) => u.rowIndex === rowIndex);
+  if (idx !== -1) pendingRowUpdates.splice(idx, 1);
+  pendingRowUpdates.push({ rowIndex, status, priority });
+
+  if (status === 'נדחה') {
+    consecutiveSkips++;
+    // Don't increment keeps on skip
+  } else if (status === 'אושר') {
+    consecutiveSkips = 0;
+    keepsSinceFlush++;
+  } else {
+    // 'ממתין' = undo, reset skip streak
+    consecutiveSkips = 0;
+  }
+}
+
+/** Returns true if the queue should be flushed based on SYNC_CONFIG thresholds. */
+export function shouldFlush(): boolean {
+  if (pendingRowUpdates.length === 0) return false;
+  if (keepsSinceFlush >= SYNC_CONFIG.keepFlushThreshold) return true;
+  if (consecutiveSkips >= SYNC_CONFIG.skipFlushThreshold) return true;
+  return false;
+}
+
+/** Flush all queued row updates in a single batchUpdate call.
+ *  Also triggers the tracking-sheet sync.
+ *  Returns a promise that resolves when the API call completes. */
+export async function flushContactRowUpdates(
   accessToken: string,
   spreadsheetId: string,
-  rowIndex: number, // 1-based index of the contact row (row 1 = header → first contact is row 2)
-  status: 'אושר' | 'נדחה',
-  priority?: string
 ): Promise<void> {
-  const range = `${TAB1_ENC}!F${rowIndex + 1}:H${rowIndex + 1}`;
+  const now = Date.now();
+  if (now - lastRowFlushTs < SYNC_CONFIG.minFlushIntervalMs) return;
+  if (pendingRowUpdates.length === 0) return;
+
+  const batch = pendingRowUpdates.splice(0);
+  keepsSinceFlush = 0;
+  consecutiveSkips = 0;
+  lastRowFlushTs = now;
+
   const timestamp = new Date().toLocaleString('he-IL');
-  return fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values: [[status, priority ? PRIORITY_LABEL[priority] : '', timestamp]] }),
-  }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); });
+  const data = batch.map((u) => ({
+    range: `${TAB1_ENC}!F${u.rowIndex + 1}:H${u.rowIndex + 1}`,
+    values: [[
+      u.status,
+      u.priority ? PRIORITY_LABEL[u.priority] : '',
+      u.status === 'ממתין' ? '' : timestamp,
+    ]],
+  }));
+
+  const resp = await fetch(
+    `${SHEETS_API}/${spreadsheetId}/values:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'RAW', data }),
+    }
+  );
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 }
+
+/** Force-flush any remaining queued updates (e.g. on chapter complete / unmount). */
+export function hasPendingUpdates(): boolean {
+  return pendingRowUpdates.length > 0;
+}
+
 
 // ─── Load pending contacts from an existing Tab 1 ───────────────────────────
 export async function loadPendingContacts(
@@ -290,17 +365,9 @@ export async function syncApprovedTab(
 }
 
 // ─── Reset a contact's row back to pending (undo swipe) ──────────────────────
-export function clearContactRow(
-  accessToken: string,
-  spreadsheetId: string,
-  rowIndex: number // same 1-based index as updateContactRow
-): Promise<void> {
-  const range = `${TAB1_ENC}!F${rowIndex + 1}:H${rowIndex + 1}`;
-  return fetch(`${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values: [['ממתין', '', '']] }),
-  }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); });
+// Undo is queued just like approve/reject — it will be flushed with the batch.
+export function clearContactRow(rowIndex: number): void {
+  queueContactRowUpdate(rowIndex, 'ממתין');
 }
 
 // ─── Load ALL contacts with their status (for session restore) ──────────────
@@ -433,7 +500,7 @@ const SOURCE_LABEL: Record<string, string> = {
   manual: 'ידני',
 };
 
-// Debounce: skip sync if less than 2s since last sync
+// Debounce: skip sync if less than minFlushIntervalMs since last sync
 let lastTrackingSyncTs = 0;
 
 // ─── Find existing tracking sheet ────────────────────────────────────────────
@@ -610,7 +677,7 @@ export function syncTrackingSheet(
   stats: TrackingStats
 ): void {
   const now = Date.now();
-  if (now - lastTrackingSyncTs < 2000) return;
+  if (now - lastTrackingSyncTs < SYNC_CONFIG.minFlushIntervalMs) return;
   lastTrackingSyncTs = now;
 
   // Fire both syncs in parallel, don't await

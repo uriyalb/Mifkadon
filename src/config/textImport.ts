@@ -3,7 +3,7 @@
 export const IMPORT_TEXT = {
   title: 'ייבוא אנשי קשר',
   resume: {
-    title: 'נמצא סשן קיים',
+    title: 'נמצא תהליך קיים',
     info: (processed: number, total: number, pending: number) =>
       `מיינת ${processed} מתוך ${total} — נותרו ${pending} אנשי קשר.`,
     button: 'המשך מהמקום שעצרת',
@@ -11,7 +11,7 @@ export const IMPORT_TEXT = {
   sources: {
     google: {
       title: 'Google Contacts',
-      desc: 'ייבוא כל אנשי הקשר מחשבון Google שלך',
+      desc: 'ייבוא כל אנשי הקשר מחשבון ה-Google שלך',
       action: 'ייבא',
     },
     facebook: {

@@ -12,8 +12,13 @@ export const SWIPE_TEXT = {
     skip: 'דלג',
   },
   toasts: {
-    halfChapter: '!חצי מהפרק',
+    halfChapter: '!חצי מהדרך',
     undoLimit: 'ניתן לחזור עד 10 כרטיסים בלבד',
+  },
+  chapterProgress: {
+    sorted: (done: number, total: number) => `${done}/${total} מוינו`,
+    left: (n: number) => `נותרו ${n}`,
+    eta: (time: string) => `סיום ${time}`,
   },
   backLink: 'חזור לייבוא',
 } as const;

@@ -119,12 +119,21 @@
   to   { background-position: 100% 0%; }
 }
 
-/* Sprite animation for Ilan_sprite.png (172×192, 2×2 grid — 4 frames) */
+/* Sprite animation for Ilan_sprite.png (344×288, 4×3 grid — 12 frames, each 86×96) */
 @keyframes ilan-ride-sprite {
-  0%    { background-position: 0%   0%;   }
-  25%   { background-position: 100% 0%;   }
-  50%   { background-position: 0%   100%; }
-  75%   { background-position: 100% 100%; }
+  0%       { background-position: 0%       0%;   animation-timing-function: step-end; }
+  8.3333%  { background-position: 33.3333% 0%;   animation-timing-function: step-end; }
+  16.6667% { background-position: 66.6667% 0%;   animation-timing-function: step-end; }
+  25%      { background-position: 100%     0%;   animation-timing-function: step-end; }
+  33.3333% { background-position: 0%       50%;  animation-timing-function: step-end; }
+  41.6667% { background-position: 33.3333% 50%;  animation-timing-function: step-end; }
+  50%      { background-position: 66.6667% 50%;  animation-timing-function: step-end; }
+  58.3333% { background-position: 100%     50%;  animation-timing-function: step-end; }
+  66.6667% { background-position: 0%       100%; animation-timing-function: step-end; }
+  75%      { background-position: 33.3333% 100%; animation-timing-function: step-end; }
+  83.3333% { background-position: 66.6667% 100%; animation-timing-function: step-end; }
+  91.6667% { background-position: 100%     100%; animation-timing-function: step-end; }
+  100%     { background-position: 0%       0%;   }
 }
 
 /* Parallax scroll layers — width:200% elements translate -50% to loop seamlessly */
