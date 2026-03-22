@@ -10,6 +10,7 @@ export const SWIPE_TEXT = {
   overlays: {
     keep: 'שמור',
     skip: 'דלג',
+    registered: 'כבר פקוד',
   },
   toasts: {
     halfChapter: '!חצי מהדרך',

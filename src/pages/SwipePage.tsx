@@ -22,6 +22,7 @@ import { JOURNEY } from '../data/journeyRoute';
 import { CHAPTERS } from '../config/chapters';
 import { PRIORITY_LABELS, SHEET_STATUS } from '../config/labels';
 import { SWIPE_TEXT } from '../config/textSwipe';
+import SwipeConfetti from '../components/SwipeConfetti';
 
 interface Props {
   onFinish: () => void;
@@ -84,7 +85,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   // Per-chapter stats tracking
   const chapterStartTimeRef = useRef<number>(Date.now());
   const chapterStatsRef = useRef<{ kept: number; skipped: number; priorities: Record<Priority, number> }>({
-    kept: 0, skipped: 0, priorities: { high: 0, medium: 0, low: 0 },
+    kept: 0, skipped: 0, priorities: { high: 0, medium: 0, low: 0, registered: 0 },
   });
   const [completedStats, setCompletedStats] = useState<ChapterStats | null>(null);
 
@@ -109,6 +110,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   // Progress dashboard overlay
   const [showDashboard, setShowDashboard] = useState(false);
   const [dashboardTrackingData, setDashboardTrackingData] = useState<Map<string, ContactTrackingData> | null>(null);
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   const openDashboard = useCallback(() => {
     setShowDashboard(true);
@@ -149,7 +151,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
     // Reset chapter-local state
     chapterStartTimeRef.current = Date.now();
-    chapterStatsRef.current = { kept: 0, skipped: 0, priorities: { high: 0, medium: 0, low: 0 } };
+    chapterStatsRef.current = { kept: 0, skipped: 0, priorities: { high: 0, medium: 0, low: 0, registered: 0 } };
     milestoneShownRef.current = false;
     setSwipeHistory([]);
   }, [activeChapter, chapterSizes.length]); // Only re-run when chapter changes, not on every swipe
@@ -197,6 +199,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       highCount: session.selected.filter((c) => c.priority === 'high').length,
       mediumCount: session.selected.filter((c) => c.priority === 'medium').length,
       lowCount: session.selected.filter((c) => c.priority === 'low').length,
+      registeredCount: session.selected.filter((c) => c.priority === 'registered').length,
       totalSecondsSpent: session.totalSecondsSpent ?? 0,
       sessionSorted: (totalApproved + totalRejected) - (session.sessionStartSorted ?? 0),
     };
@@ -282,6 +285,26 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     queueContactRowUpdate(rowIndex, SHEET_STATUS.rejected);
     tryFlush();
   }, [swipeLeft, getRowIndex, handleChapterComplete, checkMilestone, tryFlush]);
+
+  const handleSwipeUp = useCallback((contact: Contact) => {
+    const rowIndex = getRowIndex(contact);
+    swipeRight(contact, 'registered');
+    chapterStatsRef.current.kept++;
+    chapterStatsRef.current.priorities.registered++;
+    setSwipeHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), { contact, direction: 'right', rowIndex, priority: 'registered' }]);
+    setRemaining((prev) => {
+      const next = prev.slice(1);
+      if (next.length === 0) {
+        if (showDoneTimerRef.current !== null) clearTimeout(showDoneTimerRef.current);
+        showDoneTimerRef.current = setTimeout(handleChapterComplete, 400);
+      }
+      return next;
+    });
+    setConfettiTrigger((prev) => prev + 1);
+    checkMilestone();
+    queueContactRowUpdate(rowIndex, SHEET_STATUS.registered, 'registered');
+    tryFlush();
+  }, [swipeRight, getRowIndex, handleChapterComplete, checkMilestone, tryFlush]);
 
   const handleUndo = useCallback(() => {
     if (swipeHistory.length === 0) {
@@ -426,6 +449,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
                   dragY={dragY}
                   onSwipeRight={handleSwipeRight}
                   onSwipeLeft={handleSwipeLeft}
+                  onSwipeUp={handleSwipeUp}
                 />
               ) : null}
             </AnimatePresence>
@@ -437,6 +461,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       {chapterPhase === 'swiping' && (
         <PriorityZones dragX={dragX} dragY={dragY} dragStartY={dragStartY} />
       )}
+
+      {/* Pixel confetti on swipe-up ("כבר פקוד") */}
+      <SwipeConfetti trigger={confettiTrigger} />
 
       {/* Progress dashboard — opens on TravelScene tap */}
       <AnimatePresence>
