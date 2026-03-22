@@ -9,12 +9,14 @@ const PRIORITY_LABEL: Record<string, string> = {
   high: 'ניצחון מהיר',
   medium: 'סיכוי טוב',
   low: 'דרושה עבודה',
+  registered: 'כבר פקוד',
 };
 
 const LABEL_TO_PRIORITY: Record<string, Priority> = {
   'ניצחון מהיר': 'high',
   'סיכוי טוב': 'medium',
   'דרושה עבודה': 'low',
+  'כבר פקוד': 'registered',
 };
 
 // Tab names (URL-encoded for API calls)
@@ -128,7 +130,7 @@ export async function initContactsTab(
 
 interface PendingRowUpdate {
   rowIndex: number;
-  status: 'אושר' | 'נדחה' | 'ממתין';
+  status: 'אושר' | 'נדחה' | 'ממתין' | 'כבר פקוד';
   priority?: string;
 }
 
@@ -140,7 +142,7 @@ let lastRowFlushTs = 0;
 /** Queue a contact-row update (does NOT call the API). */
 export function queueContactRowUpdate(
   rowIndex: number,
-  status: 'אושר' | 'נדחה' | 'ממתין',
+  status: 'אושר' | 'נדחה' | 'ממתין' | 'כבר פקוד',
   priority?: string
 ): void {
   // If this row is already queued, replace the entry (undo then re-swipe)
@@ -151,7 +153,7 @@ export function queueContactRowUpdate(
   if (status === 'נדחה') {
     consecutiveSkips++;
     // Don't increment keeps on skip
-  } else if (status === 'אושר') {
+  } else if (status === 'אושר' || status === 'כבר פקוד') {
     consecutiveSkips = 0;
     keepsSinceFlush++;
   } else {
@@ -300,7 +302,7 @@ export async function syncApprovedTab(
 
   if (approved.length === 0) return;
 
-  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2, registered: 3 };
   const sorted = [...approved].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
   const header = ['שם', 'טלפון', 'אימייל', 'מקור', 'עדיפות', 'תאריך אישור'];
@@ -413,7 +415,7 @@ export async function loadAllContactsWithStatus(
     allContacts.push(contact);
 
     const status = row[5] ?? 'ממתין';
-    if (status === 'אושר') {
+    if (status === 'אושר' || status === 'כבר פקוד') {
       const priorityLabel = row[6] ?? '';
       const priority: Priority = LABEL_TO_PRIORITY[priorityLabel] ?? 'medium';
       const timestamp = row[7] ?? '';
@@ -495,7 +497,7 @@ const TRACKING_TAB1_ENC = encodeURIComponent(TRACKING_TAB1);
 const TRACKING_TAB2_ENC = encodeURIComponent(TRACKING_TAB2);
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string;
 
-const PRIORITY_TO_NUMBER: Record<string, number> = { high: 1, medium: 2, low: 3 };
+const PRIORITY_TO_NUMBER: Record<string, number> = { high: 1, medium: 2, low: 3, registered: 9 };
 
 const SOURCE_LABEL: Record<string, string> = {
   google: 'ספר טלפונים',
@@ -670,6 +672,7 @@ export interface TrackingStats {
   highCount: number;
   mediumCount: number;
   lowCount: number;
+  registeredCount: number;
   totalSecondsSpent: number;
   sessionSorted: number;
 }
@@ -727,7 +730,7 @@ async function syncTrackingContacts(
 
   if (approved.length === 0) return;
 
-  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2, registered: 3 };
   const sorted = [...approved].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
   const rows = sorted.map((c) => {
@@ -781,6 +784,7 @@ async function syncTrackingSummary(
     ['פוטנציאל גבוה (1)', stats.highCount],
     ['פוטנציאל בינוני (2)', stats.mediumCount],
     ['פוטנציאל נמוך (3)', stats.lowCount],
+    ['כבר פקוד (9)', stats.registeredCount],
     ['', ''],
     ['זמן כולל (דקות)', minutesSpent],
     ['מוינו בסשן אחרון', stats.sessionSorted],

@@ -1,6 +1,6 @@
 export type ContactSource = 'google' | 'facebook' | 'instagram' | 'manual' | 'phone';
 
-export type Priority = 'high' | 'medium' | 'low';
+export type Priority = 'high' | 'medium' | 'low' | 'registered';
 
 export interface Contact {
   id: string;

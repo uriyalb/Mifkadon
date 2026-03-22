@@ -87,6 +87,10 @@
     background: linear-gradient(135deg, #EAB308, #FDE047);
   }
 
+  .gradient-registered {
+    background: linear-gradient(135deg, #2196F3, #64B5F6);
+  }
+
   /* Slim strip glows for priority zone edge indicator */
   .zone-strip-glow-high {
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.7), 0 0 20px rgba(34, 197, 94, 0.3);

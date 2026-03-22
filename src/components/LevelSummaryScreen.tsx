@@ -214,7 +214,7 @@ export default function LevelSummaryScreen({
         {/* Row 3: Priority breakdown pills */}
         {stats.kept > 0 && (
           <div className="flex items-center justify-center gap-2">
-            {(['high', 'medium', 'low'] as Priority[]).map((p) => {
+            {(['high', 'medium', 'low', 'registered'] as Priority[]).map((p) => {
               const count = stats.priorityBreakdown[p] ?? 0;
               if (count === 0) return null;
               const cfg = PRIORITY_LABELS[p];

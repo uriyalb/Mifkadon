@@ -6,6 +6,9 @@ export const SWIPE_THRESHOLD = 50;
 /** Minimum horizontal drag (px) before priority zones appear */
 export const ZONE_REVEAL_THRESHOLD = 30;
 
+/** Minimum upward drag (px) to commit a "כבר פקוד" swipe */
+export const SWIPE_UP_THRESHOLD = 80;
+
 /** Vertical threshold for priority zone boundaries — 8% of viewport height */
 export function getPriorityThreshold(): number {
   return Math.round(window.innerHeight * 0.08);

@@ -10,9 +10,10 @@ interface Props {
   dragY: MotionValue<number>;
   onSwipeRight: (contact: Contact, priority: Priority) => void;
   onSwipeLeft: (contact: Contact) => void;
+  onSwipeUp: (contact: Contact) => void;
 }
 
-export default function CardStack({ contacts, dragX, dragY, onSwipeRight, onSwipeLeft }: Props) {
+export default function CardStack({ contacts, dragX, dragY, onSwipeRight, onSwipeLeft, onSwipeUp }: Props) {
   const visibleCards = contacts.slice(0, 3);
 
   return (
@@ -28,6 +29,7 @@ export default function CardStack({ contacts, dragX, dragY, onSwipeRight, onSwip
             isTop={idx === 0}
             onSwipeRight={(priority) => onSwipeRight(contact, priority)}
             onSwipeLeft={() => onSwipeLeft(contact)}
+            onSwipeUp={() => onSwipeUp(contact)}
           />
         ))}
       </AnimatePresence>

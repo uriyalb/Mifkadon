@@ -15,7 +15,7 @@ interface Props {
   totalSecondsSpent: number;
 }
 
-const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2, registered: 3 };
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -42,6 +42,7 @@ export default function ProgressDashboard({ onClose, activeChapter, approved, tr
   const highCount = approved.filter((c) => c.priority === 'high').length;
   const mediumCount = approved.filter((c) => c.priority === 'medium').length;
   const lowCount = approved.filter((c) => c.priority === 'low').length;
+  const registeredCount = approved.filter((c) => c.priority === 'registered').length;
 
   // Journey progress: how many chapters completed
   const totalProcessed = chapterSizes.slice(0, activeChapter).reduce((a, b) => a + b, 0);
@@ -154,6 +155,7 @@ export default function ProgressDashboard({ onClose, activeChapter, approved, tr
             <PriorityPill priority="high" count={highCount} />
             <PriorityPill priority="medium" count={mediumCount} />
             <PriorityPill priority="low" count={lowCount} />
+            <PriorityPill priority="registered" count={registeredCount} />
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
             <span className="text-xs text-white/50">זמן כולל</span>

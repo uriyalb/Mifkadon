@@ -16,9 +16,10 @@ interface Props {
 }
 
 const PRIORITY_CONFIG: Record<Priority, { bgClass: string; textColor: string; bgLight: string; border: string }> = {
-  high:   { bgClass: 'gradient-high',   textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
-  medium: { bgClass: 'gradient-medium', textColor: 'text-lime-700',   bgLight: 'bg-lime-50',   border: 'border-lime-200' },
-  low:    { bgClass: 'gradient-low',    textColor: 'text-yellow-700', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
+  high:       { bgClass: 'gradient-high',       textColor: 'text-green-700',  bgLight: 'bg-green-50',  border: 'border-green-200' },
+  medium:     { bgClass: 'gradient-medium',     textColor: 'text-lime-700',   bgLight: 'bg-lime-50',   border: 'border-lime-200' },
+  low:        { bgClass: 'gradient-low',        textColor: 'text-yellow-700', bgLight: 'bg-yellow-50', border: 'border-yellow-200' },
+  registered: { bgClass: 'gradient-registered', textColor: 'text-blue-700',   bgLight: 'bg-blue-50',   border: 'border-blue-200' },
 };
 
 export default function ResultsPage({ onReset }: Props) {
@@ -35,6 +36,7 @@ export default function ResultsPage({ onReset }: Props) {
     high: selected.filter((c) => c.priority === 'high'),
     medium: selected.filter((c) => c.priority === 'medium'),
     low: selected.filter((c) => c.priority === 'low'),
+    registered: selected.filter((c) => c.priority === 'registered'),
   };
 
   // Auto-sync approved tab and tracking sheet when results page opens
@@ -67,6 +69,7 @@ export default function ResultsPage({ onReset }: Props) {
         highCount: session.selected.filter((c) => c.priority === 'high').length,
         mediumCount: session.selected.filter((c) => c.priority === 'medium').length,
         lowCount: session.selected.filter((c) => c.priority === 'low').length,
+        registeredCount: session.selected.filter((c) => c.priority === 'registered').length,
         totalSecondsSpent: session.totalSecondsSpent ?? 0,
         sessionSorted: (totalApproved + totalRejected) - (session.sessionStartSorted ?? 0),
       };
@@ -87,8 +90,8 @@ export default function ResultsPage({ onReset }: Props) {
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {(['high', 'medium', 'low'] as Priority[]).map((p) => {
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {(['high', 'medium', 'low', 'registered'] as Priority[]).map((p) => {
             const cfg = PRIORITY_CONFIG[p];
             return (
               <motion.div
@@ -162,6 +165,7 @@ export default function ResultsPage({ onReset }: Props) {
           <TabChip label={PRIORITY_LABELS.high.zoneName} count={byPriority.high.length} active={activeTab === 'high'} onClick={() => setActiveTab('high')} color="bg-green-100 text-green-700" />
           <TabChip label={PRIORITY_LABELS.medium.zoneName} count={byPriority.medium.length} active={activeTab === 'medium'} onClick={() => setActiveTab('medium')} color="bg-lime-100 text-lime-700" />
           <TabChip label={PRIORITY_LABELS.low.zoneName} count={byPriority.low.length} active={activeTab === 'low'} onClick={() => setActiveTab('low')} color="bg-yellow-100 text-yellow-700" />
+          <TabChip label={PRIORITY_LABELS.registered.zoneName} count={byPriority.registered.length} active={activeTab === 'registered'} onClick={() => setActiveTab('registered')} color="bg-blue-100 text-blue-700" />
         </div>
 
         {/* Contact list */}
