@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const COLORS = ['#2196F3', '#64B5F6', '#FFD700', '#E53935', '#22C55E', '#42A5F5'];
-const PARTICLE_COUNT = 30;
+const COLORS = ['#2196F3', '#64B5F6', '#FFD700', '#E53935', '#22C55E', '#42A5F5', '#BBDEFB', '#FFF176'];
+const PARTICLE_COUNT = 50;
 
 interface Particle {
   id: number;
+  startX: number;
+  startY: number;
   targetX: number;
   targetY: number;
   size: number;
@@ -16,18 +18,24 @@ interface Particle {
 }
 
 function createParticles(): Particle[] {
+  // Origin near the card center
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight * 0.4;
+
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
     const angle = Math.random() * Math.PI * 2;
-    const velocity = 60 + Math.random() * 160;
+    const velocity = 120 + Math.random() * 280;
     return {
       id: i,
+      startX: cx + (Math.random() - 0.5) * 40,
+      startY: cy + (Math.random() - 0.5) * 40,
       targetX: Math.cos(angle) * velocity,
-      targetY: Math.sin(angle) * velocity - 80, // bias upward
-      size: 3 + Math.floor(Math.random() * 5),
+      targetY: Math.sin(angle) * velocity + 60, // slight gravity bias
+      size: 5 + Math.floor(Math.random() * 7),
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       rotate: Math.random() * 720 - 360,
-      delay: Math.random() * 0.2,
-      duration: 0.8 + Math.random() * 0.6,
+      delay: Math.random() * 0.15,
+      duration: 1.2 + Math.random() * 0.8,
     };
   });
 }
@@ -45,7 +53,7 @@ export default function SwipeConfetti({ trigger }: Props) {
     setBursts((prev) => [...prev, burst]);
     const t = setTimeout(() => {
       setBursts((prev) => prev.filter((b) => b.key !== burst.key));
-    }, 2000);
+    }, 3000);
     return () => clearTimeout(t);
   }, [trigger]);
 
@@ -57,30 +65,33 @@ export default function SwipeConfetti({ trigger }: Props) {
             <motion.div
               key={`${burst.key}-${p.id}`}
               initial={{
-                x: '50vw',
-                y: '45vh',
+                x: p.startX,
+                y: p.startY,
                 opacity: 1,
                 rotate: 0,
                 scale: 1,
               }}
               animate={{
-                x: `calc(50vw + ${p.targetX}px)`,
-                y: `calc(45vh + ${p.targetY}px)`,
-                opacity: 0,
+                x: p.startX + p.targetX,
+                y: p.startY + p.targetY,
+                opacity: [1, 1, 0.8, 0],
                 rotate: p.rotate,
-                scale: 0.3,
+                scale: [1, 1.2, 0.6],
               }}
               exit={{ opacity: 0 }}
               transition={{
                 duration: p.duration,
                 delay: p.delay,
-                ease: [0.25, 0.46, 0.45, 0.94],
+                ease: [0.22, 0.61, 0.36, 1],
+                opacity: { duration: p.duration, times: [0, 0.3, 0.7, 1] },
+                scale: { duration: p.duration, times: [0, 0.2, 1] },
               }}
               style={{
                 position: 'absolute',
                 width: p.size,
                 height: p.size,
                 backgroundColor: p.color,
+                borderRadius: Math.random() > 0.5 ? 0 : 1,
               }}
             />
           ))
