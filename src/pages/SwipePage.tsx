@@ -4,7 +4,10 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { Contact, Priority, ChapterStats } from '../types/contact';
-import { updateContactRow, clearContactRow, syncTrackingSheet } from '../services/googleSheets';
+import {
+  queueContactRowUpdate, shouldFlush, flushContactRowUpdates, hasPendingUpdates,
+  clearContactRow, syncTrackingSheet,
+} from '../services/googleSheets';
 import type { TrackingStats } from '../services/googleSheets';
 import { NUM_CHAPTERS } from '../config/chapters';
 import CardStack from '../components/CardStack';
@@ -183,6 +186,18 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     syncTrackingSheet(user.accessToken, trackingSheetId, session.selected, stats);
   }, [user, trackingSheetId, session]);
 
+  // Flush queued row updates + tracking sync when thresholds are met
+  const tryFlush = useCallback((force = false) => {
+    if (!user || !spreadsheetId) return;
+    if (!force && !shouldFlush()) return;
+    if (!force && !hasPendingUpdates()) return;
+    setSyncState('syncing');
+    flushContactRowUpdates(user.accessToken, spreadsheetId)
+      .then(() => setSyncState('idle'))
+      .catch((e) => setSyncState('error', (e as Error).message));
+    fireTrackingSync();
+  }, [user, spreadsheetId, setSyncState, fireTrackingSync]);
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
@@ -210,7 +225,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       secondsElapsed: elapsed,
     });
     setChapterPhase('summary');
-  }, [addTimeSpent]);
+    // Force-flush any remaining queued updates at chapter boundary
+    tryFlush(true);
+  }, [addTimeSpent, tryFlush]);
 
   const handleSwipeRight = useCallback((contact: Contact, priority: Priority) => {
     const rowIndex = getRowIndex(contact);
@@ -227,14 +244,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       return next;
     });
     checkMilestone();
-    if (user && spreadsheetId) {
-      setSyncState('syncing');
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, SHEET_STATUS.approved, priority)
-        .then(() => setSyncState('idle'))
-        .catch((e) => setSyncState('error', (e as Error).message));
-    }
-    fireTrackingSync();
-  }, [swipeRight, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone, fireTrackingSync]);
+    queueContactRowUpdate(rowIndex, SHEET_STATUS.approved, priority);
+    tryFlush();
+  }, [swipeRight, getRowIndex, handleChapterComplete, checkMilestone, tryFlush]);
 
   const handleSwipeLeft = useCallback((contact: Contact) => {
     const rowIndex = getRowIndex(contact);
@@ -250,14 +262,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       return next;
     });
     checkMilestone();
-    if (user && spreadsheetId) {
-      setSyncState('syncing');
-      updateContactRow(user.accessToken, spreadsheetId, rowIndex, SHEET_STATUS.rejected)
-        .then(() => setSyncState('idle'))
-        .catch((e) => setSyncState('error', (e as Error).message));
-    }
-    fireTrackingSync();
-  }, [swipeLeft, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone, fireTrackingSync]);
+    queueContactRowUpdate(rowIndex, SHEET_STATUS.rejected);
+    tryFlush();
+  }, [swipeLeft, getRowIndex, handleChapterComplete, checkMilestone, tryFlush]);
 
   const handleUndo = useCallback(() => {
     if (swipeHistory.length === 0) {
@@ -279,14 +286,9 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     }
 
     setRemaining((prev) => [last.contact, ...prev]);
-    if (user && spreadsheetId) {
-      setSyncState('syncing');
-      clearContactRow(user.accessToken, spreadsheetId, last.rowIndex)
-        .then(() => setSyncState('idle'))
-        .catch((e) => setSyncState('error', (e as Error).message));
-    }
-    fireTrackingSync();
-  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState, showToast, fireTrackingSync]);
+    clearContactRow(last.rowIndex);
+    tryFlush();
+  }, [swipeHistory, undoSwipe, showToast, tryFlush]);
 
   // Summary → Map (or Results for last chapter)
   const handleSummaryNext = useCallback(() => {
