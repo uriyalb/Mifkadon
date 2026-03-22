@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { SelectedContact, Priority } from '../types/contact';
-import { syncApprovedTab, getSpreadsheetUrl } from '../services/googleSheets';
+import { syncApprovedTab, getSpreadsheetUrl, syncTrackingSheet } from '../services/googleSheets';
+import type { TrackingStats } from '../services/googleSheets';
+import { NUM_CHAPTERS } from '../config/chapters';
 import ContactAvatar from '../components/ContactAvatar';
 import Header from '../components/Header';
 import { PRIORITY_LABELS } from '../config/labels';
@@ -21,7 +23,7 @@ const PRIORITY_CONFIG: Record<Priority, { bgClass: string; textColor: string; bg
 
 export default function ResultsPage({ onReset }: Props) {
   const { user, demoMode } = useAuth();
-  const { session, spreadsheetId, resetSession } = useSession();
+  const { session, spreadsheetId, trackingSheetId, resetSession } = useSession();
   const [isSyncing, setIsSyncing] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function ResultsPage({ onReset }: Props) {
     low: selected.filter((c) => c.priority === 'low'),
   };
 
-  // Auto-sync approved tab when results page opens
+  // Auto-sync approved tab and tracking sheet when results page opens
   useEffect(() => {
     if (demoMode || !user || !spreadsheetId || selected.length === 0) return;
     setIsSyncing(true);
@@ -47,6 +49,29 @@ export default function ResultsPage({ onReset }: Props) {
         setError(RESULTS_TEXT.sync.syncFailed);
       })
       .finally(() => setIsSyncing(false));
+
+    // Also sync tracking sheet (fire-and-forget)
+    if (trackingSheetId && session) {
+      const totalContacts = session.contacts.length + session.selected.length + session.dismissed.length;
+      const totalApproved = session.selected.length;
+      const totalRejected = session.dismissed.length;
+      const stats: TrackingStats = {
+        userName: user.name,
+        userEmail: user.email,
+        totalContacts,
+        totalSorted: totalApproved + totalRejected,
+        totalApproved,
+        totalRejected,
+        currentChapter: (session.currentChapter ?? 0) + 1,
+        totalChapters: NUM_CHAPTERS,
+        highCount: session.selected.filter((c) => c.priority === 'high').length,
+        mediumCount: session.selected.filter((c) => c.priority === 'medium').length,
+        lowCount: session.selected.filter((c) => c.priority === 'low').length,
+        totalSecondsSpent: session.totalSecondsSpent ?? 0,
+        sessionSorted: (totalApproved + totalRejected) - (session.sessionStartSorted ?? 0),
+      };
+      syncTrackingSheet(user.accessToken, trackingSheetId, session.selected, stats);
+    }
   }, []);
 
   const displayedContacts = activeTab === 'all' ? selected : byPriority[activeTab];

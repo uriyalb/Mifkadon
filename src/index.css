@@ -99,6 +99,19 @@
   .zone-strip-glow-low {
     box-shadow: 0 0 10px rgba(234, 179, 8, 0.7), 0 0 20px rgba(234, 179, 8, 0.3);
   }
+
+  /* Big zone glows for priority zone panel */
+  .zone-glow-high {
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.6), 0 0 32px rgba(34, 197, 94, 0.25);
+  }
+
+  .zone-glow-medium {
+    box-shadow: 0 0 16px rgba(132, 204, 22, 0.6), 0 0 32px rgba(132, 204, 22, 0.25);
+  }
+
+  .zone-glow-low {
+    box-shadow: 0 0 16px rgba(234, 179, 8, 0.6), 0 0 32px rgba(234, 179, 8, 0.25);
+  }
 }
 
 @keyframes ilan-ride {
