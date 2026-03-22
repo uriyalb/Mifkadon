@@ -6,12 +6,14 @@ const PARTICLE_COUNT = 100;
 
 interface Particle {
   id: number;
-  startX: number;
-  startY: number;
-  midX: number;
-  midY: number;
-  endX: number;
-  endY: number;
+  // Percentage-based start position (vw/vh)
+  startVw: number;
+  startVh: number;
+  // Pixel offsets for mid and end positions (relative to start)
+  midOffsetX: number;
+  midOffsetY: number;
+  endOffsetX: number;
+  endOffsetY: number;
   size: number;
   color: string;
   rotate: number;
@@ -21,33 +23,32 @@ interface Particle {
 }
 
 function createParticles(): Particle[] {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-    // Spawn from left or right side, but well within the viewport
+    // Spawn from left or right side
     const fromLeft = i % 2 === 0;
-    const startX = fromLeft
-      ? w * 0.05 + Math.random() * w * 0.2    // 5%-25% from left
-      : w * 0.75 + Math.random() * w * 0.2;   // 75%-95% from left
-    const startY = h * 0.05 + Math.random() * h * 0.15; // 5%-20% from top (always visible)
+    const startVw = fromLeft
+      ? 5 + Math.random() * 20    // 5-25vw from left
+      : 75 + Math.random() * 20;  // 75-95vw from left
+    const startVh = 5 + Math.random() * 15; // 5-20vh from top
 
-    // Drift toward center of screen
-    const centerX = w / 2;
-    const driftX = (centerX - startX) * (0.3 + Math.random() * 0.4); // pull toward center
-    const sway = (Math.random() - 0.5) * 60; // gentle random sway
+    // Drift toward center
+    const driftX = fromLeft
+      ? 30 + Math.random() * 80   // drift rightward
+      : -(30 + Math.random() * 80); // drift leftward
+    const sway = (Math.random() - 0.5) * 40;
 
-    // Float downward naturally
-    const fallDistance = h * 0.35 + Math.random() * h * 0.4;
+    // Float downward
+    const fallMid = 100 + Math.random() * 150;
+    const fallEnd = fallMid + 100 + Math.random() * 200;
 
     return {
       id: i,
-      startX,
-      startY,
-      midX: startX + driftX * 0.5 + sway,
-      midY: startY + fallDistance * 0.45,
-      endX: startX + driftX + sway * 1.5,
-      endY: startY + fallDistance,
+      startVw,
+      startVh,
+      midOffsetX: driftX * 0.5 + sway,
+      midOffsetY: fallMid,
+      endOffsetX: driftX + sway * 1.5,
+      endOffsetY: fallEnd,
       size: 5 + Math.floor(Math.random() * 7),
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       rotate: Math.random() * 540 - 270,
@@ -59,7 +60,7 @@ function createParticles(): Particle[] {
 }
 
 interface Props {
-  trigger: number; // increment to trigger new burst
+  trigger: number;
 }
 
 export default function SwipeConfetti({ trigger }: Props) {
@@ -83,15 +84,23 @@ export default function SwipeConfetti({ trigger }: Props) {
             <motion.div
               key={`${burst.key}-${p.id}`}
               initial={{
-                x: p.startX,
-                y: p.startY,
+                x: `${p.startVw}vw`,
+                y: `${p.startVh}vh`,
                 opacity: 1,
                 rotate: 0,
                 scale: 1,
               }}
               animate={{
-                x: [p.startX, p.midX, p.endX],
-                y: [p.startY, p.midY, p.endY],
+                x: [
+                  `${p.startVw}vw`,
+                  `calc(${p.startVw}vw + ${p.midOffsetX}px)`,
+                  `calc(${p.startVw}vw + ${p.endOffsetX}px)`,
+                ],
+                y: [
+                  `${p.startVh}vh`,
+                  `calc(${p.startVh}vh + ${p.midOffsetY}px)`,
+                  `calc(${p.startVh}vh + ${p.endOffsetY}px)`,
+                ],
                 opacity: [1, 1, 1, 0.7, 0],
                 rotate: p.rotate,
                 scale: [1, 1.1, 1, 0.8, 0.4],
