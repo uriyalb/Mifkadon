@@ -348,6 +348,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             current={chapterSwiped}
             total={chapterTotal}
             difficulty={difficulty}
+            chapterIndex={activeChapter}
           />
         </div>
       )}
