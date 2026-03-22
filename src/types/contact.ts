@@ -21,6 +21,14 @@ export interface SelectedContact extends Contact {
   selectedAt: string; // ISO date string
 }
 
+/** Manager-filled tracking data from the shared tracking spreadsheet (columns E-H) */
+export interface ContactTrackingData {
+  lastCallDate: string;
+  callSummary: string;
+  nextCallDate: string;
+  registered: string;
+}
+
 export interface ChapterStats {
   kept: number;
   skipped: number;

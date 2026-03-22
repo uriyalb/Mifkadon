@@ -1,4 +1,4 @@
-import type { Contact, SelectedContact, Priority } from '../types/contact';
+import type { Contact, SelectedContact, Priority, ContactTrackingData } from '../types/contact';
 import { SYNC_CONFIG } from '../config/sync';
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -691,6 +691,25 @@ async function syncTrackingContacts(
   sheetId: string,
   approved: SelectedContact[]
 ): Promise<void> {
+  // Read existing rows so we can preserve admin-filled columns E-H
+  const existingMap = new Map<string, string[]>();
+  try {
+    const resp = await fetch(
+      `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:H1000`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (resp.ok) {
+      const data = await resp.json();
+      const rows = (data.values ?? []) as string[][];
+      for (const row of rows) {
+        const phone = (row[3] ?? '').trim();
+        if (phone) {
+          existingMap.set(phone, [row[4] ?? '', row[5] ?? '', row[6] ?? '', row[7] ?? '']);
+        }
+      }
+    }
+  } catch { /* ignore — will write blank E-H if read fails */ }
+
   // Clear data rows (keep header)
   await fetch(
     `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:H1000:clear`,
@@ -702,16 +721,20 @@ async function syncTrackingContacts(
   const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const sorted = [...approved].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
-  const rows = sorted.map((c) => [
-    c.name,
-    PRIORITY_TO_NUMBER[c.priority] ?? 2,
-    SOURCE_LABEL[c.source] ?? c.source,
-    c.phone ?? '',
-    '', // ת. שיחה אחרון — blank for admin
-    '', // סיכום שיחה — blank for admin
-    '', // ת. שיחה הבא — blank for admin
-    '', // התפקד/ה? — blank for admin
-  ]);
+  const rows = sorted.map((c) => {
+    const phone = c.phone ?? '';
+    const saved = existingMap.get(phone.trim()) ?? ['', '', '', ''];
+    return [
+      c.name,
+      PRIORITY_TO_NUMBER[c.priority] ?? 2,
+      SOURCE_LABEL[c.source] ?? c.source,
+      phone,
+      saved[0], // ת. שיחה אחרון — preserved from admin
+      saved[1], // סיכום שיחה — preserved from admin
+      saved[2], // ת. שיחה הבא — preserved from admin
+      saved[3], // התפקד/ה? — preserved from admin
+    ];
+  });
 
   await fetch(
     `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2?valueInputOption=RAW`,
@@ -789,4 +812,30 @@ async function syncTrackingSummary(
       ],
     }),
   }).catch(() => {});
+}
+
+// ─── Load admin-filled tracking data (columns E-H) ─────────────────────────
+export async function loadTrackingData(
+  accessToken: string,
+  trackingSheetId: string,
+): Promise<Map<string, ContactTrackingData>> {
+  const result = new Map<string, ContactTrackingData>();
+  const resp = await fetch(
+    `${SHEETS_API}/${trackingSheetId}/values/${TRACKING_TAB1_ENC}!A2:H1000`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!resp.ok) return result;
+  const data = await resp.json();
+  const rows = (data.values ?? []) as string[][];
+  for (const row of rows) {
+    const phone = (row[3] ?? '').trim();
+    if (!phone) continue;
+    result.set(phone, {
+      lastCallDate: row[4] ?? '',
+      callSummary: row[5] ?? '',
+      nextCallDate: row[6] ?? '',
+      registered: row[7] ?? '',
+    });
+  }
+  return result;
 }

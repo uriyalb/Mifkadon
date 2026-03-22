@@ -12,9 +12,10 @@ interface Props {
   total: number;   // total contacts in this chapter
   difficulty: Difficulty;
   chapterIndex: number;
+  onClick?: () => void;
 }
 
-export default function TravelScene({ fromCity, toCity, pct, current, total, difficulty, chapterIndex }: Props) {
+export default function TravelScene({ fromCity, toCity, pct, current, total, difficulty, chapterIndex, onClick }: Props) {
   const clampedPct = Math.max(0, Math.min(100, pct));
   const diffCfg = DIFFICULTY_LABELS[difficulty];
 
@@ -33,7 +34,7 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
   );
 
   return (
-    <div className="w-full select-none" dir="ltr" style={{ height: 150 }}>
+    <div className="w-full select-none" dir="ltr" style={{ height: 150, cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
       {/* City labels row — LTR so progress goes left→right matching the character */}
       <div className="flex items-center justify-between px-3 pb-1">
         <span className="text-[11px] font-bold text-white/90 drop-shadow-sm">{fromCity}</span>
