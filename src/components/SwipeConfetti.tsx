@@ -17,6 +17,7 @@ interface Particle {
   rotate: number;
   delay: number;
   duration: number;
+  round: boolean;
 }
 
 function createParticles(): Particle[] {
@@ -24,35 +25,35 @@ function createParticles(): Particle[] {
   const h = window.innerHeight;
 
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-    // Spawn from left or right side of the screen
+    // Spawn from left or right side, but well within the viewport
     const fromLeft = i % 2 === 0;
     const startX = fromLeft
-      ? Math.random() * w * 0.15          // left 15%
-      : w - Math.random() * w * 0.15;     // right 15%
-    const startY = Math.random() * h * 0.3 - h * 0.05; // top area, slightly above screen
+      ? w * 0.05 + Math.random() * w * 0.2    // 5%-25% from left
+      : w * 0.75 + Math.random() * w * 0.2;   // 75%-95% from left
+    const startY = h * 0.05 + Math.random() * h * 0.15; // 5%-20% from top (always visible)
 
-    // Horizontal drift toward center with some randomness
-    const driftX = fromLeft
-      ? 40 + Math.random() * 160   // drift rightward
-      : -(40 + Math.random() * 160); // drift leftward
-    const sway = (Math.random() - 0.5) * 80; // gentle random sway
+    // Drift toward center of screen
+    const centerX = w / 2;
+    const driftX = (centerX - startX) * (0.3 + Math.random() * 0.4); // pull toward center
+    const sway = (Math.random() - 0.5) * 60; // gentle random sway
 
     // Float downward naturally
-    const fallDistance = h * 0.5 + Math.random() * h * 0.5;
+    const fallDistance = h * 0.35 + Math.random() * h * 0.4;
 
     return {
       id: i,
       startX,
       startY,
-      midX: startX + driftX * 0.6 + sway,
-      midY: startY + fallDistance * 0.4,
-      endX: startX + driftX + sway * 2,
+      midX: startX + driftX * 0.5 + sway,
+      midY: startY + fallDistance * 0.45,
+      endX: startX + driftX + sway * 1.5,
       endY: startY + fallDistance,
       size: 5 + Math.floor(Math.random() * 7),
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       rotate: Math.random() * 540 - 270,
-      delay: Math.random() * 0.6,
-      duration: 2.0 + Math.random() * 1.5,
+      delay: Math.random() * 0.5,
+      duration: 1.8 + Math.random() * 1.2,
+      round: Math.random() > 0.5,
     };
   });
 }
@@ -84,16 +85,16 @@ export default function SwipeConfetti({ trigger }: Props) {
               initial={{
                 x: p.startX,
                 y: p.startY,
-                opacity: 0,
+                opacity: 1,
                 rotate: 0,
-                scale: 0.5,
+                scale: 1,
               }}
               animate={{
                 x: [p.startX, p.midX, p.endX],
                 y: [p.startY, p.midY, p.endY],
-                opacity: [0, 1, 1, 0.7, 0],
+                opacity: [1, 1, 1, 0.7, 0],
                 rotate: p.rotate,
-                scale: [0.5, 1.1, 1, 0.8, 0.4],
+                scale: [1, 1.1, 1, 0.8, 0.4],
               }}
               exit={{ opacity: 0 }}
               transition={{
@@ -110,7 +111,7 @@ export default function SwipeConfetti({ trigger }: Props) {
                 width: p.size,
                 height: p.size,
                 backgroundColor: p.color,
-                borderRadius: Math.random() > 0.5 ? 0 : 1,
+                borderRadius: p.round ? 1 : 0,
               }}
             />
           ))
