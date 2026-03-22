@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useMotionValue, useMotionValueEvent, AnimatePresence, motion, animate } from 'framer-motion';
+import { useMotionValue, useMotionValueEvent, AnimatePresence, motion } from 'framer-motion';
 import type { Priority } from '../types/contact';
 import { WALKTHROUGH_CARDS, WALKTHROUGH_COMPLETE, WALKTHROUGH_FEEDBACK } from '../config/tutorialConfig';
-import { SWIPE_THRESHOLD, getPriority } from '../config/swipeThresholds';
 import CardStack from './CardStack';
 import PriorityZones from './PriorityZones';
 import PixelFinger from './PixelFinger';
@@ -19,7 +18,6 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
   const [phase, setPhase] = useState<Phase>('playing');
   const [shakeKey, setShakeKey] = useState(0);
   const [showFinger, setShowFinger] = useState(false);
-  const [fingerAnimDone, setFingerAnimDone] = useState(false);
   const [wrongToast, setWrongToast] = useState(false);
 
   const dragX = useMotionValue(0);
@@ -50,7 +48,6 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       if (phase === 'playing') {
-        setFingerAnimDone(false);
         setShowFinger(true);
       }
     }, WALKTHROUGH_FEEDBACK.fingerIdleDelay);
@@ -60,7 +57,6 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
   useEffect(() => {
     if (phase !== 'playing') return;
     setShowFinger(false);
-    setFingerAnimDone(false);
     const t = setTimeout(() => {
       setShowFinger(true);
     }, 1000);
@@ -243,6 +239,7 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
                 dragY={dragY}
                 onSwipeRight={handleSwipeRight}
                 onSwipeLeft={handleSwipeLeft}
+                onSwipeUp={() => {}}
               />
             )}
           </AnimatePresence>
@@ -259,7 +256,7 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
         endX={fingerPos.endX}
         endY={fingerPos.endY}
         visible={showFinger && phase === 'playing'}
-        onAnimationComplete={() => setFingerAnimDone(true)}
+        onAnimationComplete={() => {}}
       />
 
       {/* Wrong action toast */}
