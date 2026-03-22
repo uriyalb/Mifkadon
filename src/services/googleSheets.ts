@@ -421,7 +421,7 @@ const TRACKING_TAB1 = 'אנשי קשר מאושרים';
 const TRACKING_TAB2 = 'סיכום התקדמות';
 const TRACKING_TAB1_ENC = encodeURIComponent(TRACKING_TAB1);
 const TRACKING_TAB2_ENC = encodeURIComponent(TRACKING_TAB2);
-const ADMIN_EMAIL = 'Mifkad.adomim@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string;
 
 const PRIORITY_TO_NUMBER: Record<string, number> = { high: 1, medium: 2, low: 3 };
 
