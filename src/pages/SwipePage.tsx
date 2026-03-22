@@ -87,6 +87,17 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   // Mid-chapter milestone tracking
   const milestoneShownRef = useRef(false);
 
+  // Elapsed seconds for ETA calculation (ticks every second)
+  const [chapterElapsed, setChapterElapsed] = useState(0);
+  useEffect(() => {
+    if (chapterPhase !== 'swiping') return;
+    setChapterElapsed(0);
+    const id = setInterval(() => {
+      setChapterElapsed(Math.round((Date.now() - chapterStartTimeRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [activeChapter, chapterPhase]);
+
   // Priority picker on keep button
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const pickerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -349,6 +360,27 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             total={chapterTotal}
             difficulty={difficulty}
           />
+
+          {/* Chapter progress stats */}
+          {(() => {
+            const left = chapterTotal - chapterSwiped;
+            const avgSec = chapterSwiped > 0 ? chapterElapsed / chapterSwiped : 0;
+            const etaSec = Math.round(avgSec * left);
+            const etaMin = Math.floor(etaSec / 60);
+            const etaSecRem = etaSec % 60;
+            const etaStr = chapterSwiped > 0
+              ? (etaMin > 0 ? `~${etaMin}:${etaSecRem.toString().padStart(2, '0')}` : `~${etaSec}s`)
+              : '—';
+            return (
+              <div className="flex items-center justify-center gap-3 mt-1 text-[10px] text-white/60 tabular-nums" dir="rtl">
+                <span>{SWIPE_TEXT.chapterProgress.sorted(chapterSwiped, chapterTotal)}</span>
+                <span className="text-white/30">|</span>
+                <span>{SWIPE_TEXT.chapterProgress.left(left)}</span>
+                <span className="text-white/30">|</span>
+                <span>{SWIPE_TEXT.chapterProgress.eta(etaStr)}</span>
+              </div>
+            );
+          })()}
         </div>
       )}
 
