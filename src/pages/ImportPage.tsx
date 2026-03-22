@@ -300,7 +300,7 @@ export default function ImportPage({ onStart }: Props) {
   const isSaved = savedCount !== null;
 
   return (
-    <div className="h-[100dvh] flex flex-col" dir="rtl" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
+    <div className="h-[100dvh] flex flex-col" dir="rtl" style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}>
       <Header />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
@@ -312,7 +312,7 @@ export default function ImportPage({ onStart }: Props) {
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
-              className="glass rounded-2xl p-4 mb-4 border-2 border-[#FF2D78]/30"
+              className="glass rounded-2xl p-4 mb-4 border-2 border-[#E53935]/30"
             >
               <p className="font-bold text-gray-800 text-sm mb-0.5">{IMPORT_TEXT.resume.title}</p>
               <p className="text-gray-500 text-xs mb-3">
@@ -371,12 +371,12 @@ export default function ImportPage({ onStart }: Props) {
                   href="https://www.facebook.com/dyi/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#FF2D78] font-medium underline underline-offset-2"
+                  className="inline-flex items-center gap-1 text-[#E53935] font-medium underline underline-offset-2"
                 >
                   {IMPORT_TEXT.instructions.facebook.linkText}
                 </a>
                 <details>
-                  <summary className="cursor-pointer text-[#FF2D78] font-medium">{IMPORT_TEXT.instructions.facebook.summary}</summary>
+                  <summary className="cursor-pointer text-[#E53935] font-medium">{IMPORT_TEXT.instructions.facebook.summary}</summary>
                   <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
                     {IMPORT_TEXT.instructions.facebook.steps.map((step, i) => <li key={i}>{step}</li>)}
                   </ol>
@@ -409,12 +409,12 @@ export default function ImportPage({ onStart }: Props) {
                   href="https://accountscenter.instagram.com/info_and_permissions/dyi/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#FF2D78] font-medium underline underline-offset-2"
+                  className="inline-flex items-center gap-1 text-[#E53935] font-medium underline underline-offset-2"
                 >
                   {IMPORT_TEXT.instructions.instagram.linkText}
                 </a>
                 <details>
-                  <summary className="cursor-pointer text-[#FF2D78] font-medium">{IMPORT_TEXT.instructions.instagram.summary}</summary>
+                  <summary className="cursor-pointer text-[#E53935] font-medium">{IMPORT_TEXT.instructions.instagram.summary}</summary>
                   <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
                     {IMPORT_TEXT.instructions.instagram.steps.map((step, i) => <li key={i}>{step}</li>)}
                   </ol>
@@ -443,7 +443,7 @@ export default function ImportPage({ onStart }: Props) {
             />
             {sources.phone.status === 'idle' && (
               <details className="text-xs text-gray-500 mt-2">
-                <summary className="cursor-pointer text-[#FF2D78] font-medium">
+                <summary className="cursor-pointer text-[#E53935] font-medium">
                   {IMPORT_TEXT.instructions.iphone.summary}
                 </summary>
                 <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
@@ -467,7 +467,7 @@ export default function ImportPage({ onStart }: Props) {
               </div>
               <button
                 onClick={() => setShowManual((v) => !v)}
-                className="text-[#FF2D78] text-sm font-bold"
+                className="text-[#E53935] text-sm font-bold"
               >
                 {showManual ? IMPORT_TEXT.manual.closeButton : IMPORT_TEXT.manual.addButton}
               </button>
@@ -487,21 +487,21 @@ export default function ImportPage({ onStart }: Props) {
                       placeholder={IMPORT_TEXT.manual.fields.name}
                       value={manualForm.name}
                       onChange={(e) => setManualForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF2D78]"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#E53935]"
                     />
                     <input
                       type="tel"
                       placeholder={IMPORT_TEXT.manual.fields.phone}
                       value={manualForm.phone}
                       onChange={(e) => setManualForm((f) => ({ ...f, phone: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF2D78]"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#E53935]"
                     />
                     <input
                       type="email"
                       placeholder={IMPORT_TEXT.manual.fields.email}
                       value={manualForm.email}
                       onChange={(e) => setManualForm((f) => ({ ...f, email: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF2D78]"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#E53935]"
                     />
                     <button
                       onClick={handleAddManual}
@@ -565,7 +565,7 @@ export default function ImportPage({ onStart }: Props) {
                     <div className="glass rounded-xl p-3 border border-red-200">
                       <p className="text-red-600 text-sm font-medium mb-1">{saveError}</p>
                       <details className="text-xs text-gray-500">
-                        <summary className="cursor-pointer text-[#FF2D78] font-medium">{IMPORT_TEXT.instructions.apiSetup.summary}</summary>
+                        <summary className="cursor-pointer text-[#E53935] font-medium">{IMPORT_TEXT.instructions.apiSetup.summary}</summary>
                         <ol className="mt-2 space-y-1 list-decimal list-inside leading-relaxed">
                           {IMPORT_TEXT.instructions.apiSetup.steps.map((step, i) => <li key={i}>{step}</li>)}
                         </ol>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const COLORS = ['#FFD700', '#FF2D78', '#FF6BA8', '#22C55E', '#EAB308', '#84CC16'];
+const COLORS = ['#FFD700', '#E53935', '#EF5350', '#22C55E', '#EAB308', '#84CC16'];
 const PARTICLE_COUNT = 40;
 
 interface Particle {

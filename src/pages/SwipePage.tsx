@@ -391,7 +391,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   }, []);
 
   return (
-    <div className="h-[100dvh] overflow-hidden flex flex-col" style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}>
+    <div className="h-[100dvh] overflow-hidden flex flex-col" style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}>
       <Header />
 
       {/* Travel scene — pixel art parallax progress indicator */}
@@ -580,7 +580,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             <button
               onClick={() => { dismissPicker(); handleUndo(); }}
               disabled={!canUndo}
-              className="flex-none w-16 h-14 rounded-2xl glass border border-pink-200 flex items-center justify-center text-[#FF2D78] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-pink-50 active:enabled:scale-95"
+              className="flex-none w-16 h-14 rounded-2xl glass border border-red-200 flex items-center justify-center text-[#E53935] text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-red-50 active:enabled:scale-95"
               title={SWIPE_TEXT.buttons.undoTitle}
             >
               {SWIPE_TEXT.buttons.undo}
