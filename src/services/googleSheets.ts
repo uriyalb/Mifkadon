@@ -186,7 +186,7 @@ export async function flushContactRowUpdates(
 
   const timestamp = new Date().toLocaleString('he-IL');
   const data = batch.map((u) => ({
-    range: `${TAB1_ENC}!F${u.rowIndex + 1}:H${u.rowIndex + 1}`,
+    range: `'${TAB1}'!F${u.rowIndex + 1}:H${u.rowIndex + 1}`,
     values: [[
       u.status,
       u.priority ? PRIORITY_LABEL[u.priority] : '',
