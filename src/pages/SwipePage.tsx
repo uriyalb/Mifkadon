@@ -3,9 +3,10 @@ import { useMotionValue, useMotionValueEvent, AnimatePresence } from 'framer-mot
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
-import type { Contact, Priority, ChapterStats } from '../types/contact';
-import { updateContactRow, clearContactRow, syncTrackingSheet } from '../services/googleSheets';
+import type { Contact, Priority, ChapterStats, ContactTrackingData } from '../types/contact';
+import { updateContactRow, clearContactRow, syncTrackingSheet, loadTrackingData } from '../services/googleSheets';
 import type { TrackingStats } from '../services/googleSheets';
+import ProgressDashboard from '../components/ProgressDashboard';
 import { NUM_CHAPTERS } from '../config/chapters';
 import CardStack from '../components/CardStack';
 import PriorityZones from '../components/PriorityZones';
@@ -90,6 +91,22 @@ export default function SwipePage({ onFinish, onBack }: Props) {
   // Priority picker on keep button
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const pickerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Progress dashboard overlay
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [dashboardTrackingData, setDashboardTrackingData] = useState<Map<string, ContactTrackingData> | null>(null);
+
+  const openDashboard = useCallback(() => {
+    setShowDashboard(true);
+    setDashboardTrackingData(null);
+    if (user && trackingSheetId) {
+      loadTrackingData(user.accessToken, trackingSheetId)
+        .then(setDashboardTrackingData)
+        .catch(() => setDashboardTrackingData(new Map()));
+    } else {
+      setDashboardTrackingData(new Map());
+    }
+  }, [user, trackingSheetId]);
 
   const isLastChapter = activeChapter >= chapterSizes.length - 1;
 
@@ -349,6 +366,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
             total={chapterTotal}
             difficulty={difficulty}
             chapterIndex={activeChapter}
+            onClick={openDashboard}
           />
         </div>
       )}
@@ -385,6 +403,20 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       {chapterPhase === 'swiping' && (
         <PriorityZones dragX={dragX} dragY={dragY} dragStartY={dragStartY} />
       )}
+
+      {/* Progress dashboard — opens on TravelScene tap */}
+      <AnimatePresence>
+        {showDashboard && (
+          <ProgressDashboard
+            onClose={() => setShowDashboard(false)}
+            activeChapter={activeChapter}
+            approved={session?.selected ?? []}
+            trackingData={dashboardTrackingData}
+            chapterSizes={chapterSizes}
+            totalSecondsSpent={session?.totalSecondsSpent ?? 0}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Level summary overlay */}
       <AnimatePresence>
