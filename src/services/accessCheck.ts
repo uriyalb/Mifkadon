@@ -14,6 +14,8 @@ export async function isEmailAllowed(
   email: string,
   accessToken: string,
 ): Promise<boolean> {
+  if (!ACCESS_CONFIG.enabled) return true;
+
   const tab = encodeURIComponent(ACCESS_CONFIG.allowlistTab);
   const range = `${tab}!A:A`;
   const url = `${SHEETS_API}/${ACCESS_CONFIG.allowlistSheetId}/values/${range}`;

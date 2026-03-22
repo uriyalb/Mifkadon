@@ -5,6 +5,12 @@
 
 export const ACCESS_CONFIG = {
   /**
+   * Set to true to enable the email allowlist check.
+   * When false, any Google account can log in.
+   */
+  enabled: true,
+
+  /**
    * The spreadsheet ID of the public Google Sheet containing allowed emails.
    * The sheet should have emails in column A (no header required).
    * Make sure the sheet is published / shared as "Anyone with the link can view".
