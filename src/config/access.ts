@@ -15,18 +15,18 @@ export const ACCESS_CONFIG = {
    * The sheet should have emails in column A (no header required).
    * Make sure the sheet is published / shared as "Anyone with the link can view".
    */
-  allowlistSheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
+  allowlistSheetId: '1r8tKYZ2j2bwcT4vYRUVBJ85PAwX9L0Fg86mgk68mJro',
 
   /**
    * Tab name inside the allowlist spreadsheet.
    * Emails should be listed in column A.
    */
-  allowlistTab: 'Sheet1',
+  allowlistTab: 'emails',
 
   /**
    * WhatsApp phone number (with country code, no +/spaces) to send access requests to.
    */
-  whatsappNumber: '972544760589',
+  whatsappNumber: '972522622649',
 
   /**
    * Pre-filled WhatsApp message when requesting access.
