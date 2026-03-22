@@ -207,7 +207,7 @@ export default function JourneyMap({ completedChapter, cities, onContinue, isLas
             backgroundSize: '400% 300%',
             backgroundPosition: '0% 0%',
             backgroundRepeat: 'no-repeat',
-            animation: 'ilan-ride-sprite 2s steps(1) infinite',
+            animation: 'ilan-ride-sprite 2s linear infinite',
             imageRendering: 'pixelated',
             filter: 'drop-shadow(0 2px 8px rgba(255, 107, 53, 0.5))',
           }}

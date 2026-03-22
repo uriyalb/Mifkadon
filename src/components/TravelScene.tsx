@@ -146,7 +146,7 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
             backgroundImage: 'url(/Ilan_sprite.png)',
             backgroundSize: '400% 300%',
             backgroundRepeat: 'no-repeat',
-            animation: 'ilan-ride-sprite 2s steps(1) infinite',
+            animation: 'ilan-ride-sprite 2s linear infinite',
             imageRendering: 'pixelated',
             filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
           }}

@@ -148,7 +148,7 @@ export default function LevelSummaryScreen({
           backgroundRepeat: 'no-repeat',
           imageRendering: 'pixelated',
           filter: 'drop-shadow(0 4px 12px rgba(255, 107, 53, 0.4))',
-          animation: 'ilan-ride-sprite 2s steps(1) infinite',
+          animation: 'ilan-ride-sprite 2s linear infinite',
         }}
       />
 
