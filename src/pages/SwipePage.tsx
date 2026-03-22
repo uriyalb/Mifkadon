@@ -14,6 +14,7 @@ import LevelSummaryScreen from '../components/LevelSummaryScreen';
 import JourneyMap from '../components/JourneyMap';
 import ChapterIntroBadge from '../components/ChapterIntroBadge';
 import Header from '../components/Header';
+import TutorialHelpButton from '../components/TutorialHelpButton';
 import { JOURNEY } from '../data/journeyRoute';
 import { CHAPTERS } from '../config/chapters';
 import { PRIORITY_LABELS, SHEET_STATUS } from '../config/labels';
@@ -22,6 +23,7 @@ import { SWIPE_TEXT } from '../config/textSwipe';
 interface Props {
   onFinish: () => void;
   onBack: () => void;
+  onOpenTutorial?: () => void;
 }
 
 interface LastSwipe {
@@ -35,7 +37,7 @@ type ChapterPhase = 'swiping' | 'summary' | 'map';
 
 const MAX_HISTORY = 10;
 
-export default function SwipePage({ onFinish, onBack }: Props) {
+export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
   const { user } = useAuth();
   const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes } = useSession();
 
@@ -373,12 +375,17 @@ export default function SwipePage({ onFinish, onBack }: Props) {
               ? (etaMin > 0 ? `~${etaMin}:${etaSecRem.toString().padStart(2, '0')}` : `~${etaSec}s`)
               : '—';
             return (
-              <div className="flex items-center justify-center gap-3 mt-1 text-[10px] text-white/60 tabular-nums" dir="rtl">
+              <div className="flex items-center justify-center gap-3 mt-1 text-[10px] text-white/60 tabular-nums relative" dir="rtl">
                 <span>{SWIPE_TEXT.chapterProgress.sorted(chapterSwiped, chapterTotal)}</span>
                 <span className="text-white/30">|</span>
                 <span>{SWIPE_TEXT.chapterProgress.left(left)}</span>
                 <span className="text-white/30">|</span>
                 <span>{SWIPE_TEXT.chapterProgress.eta(etaStr)}</span>
+                {onOpenTutorial && (
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                    <TutorialHelpButton onClick={onOpenTutorial} />
+                  </div>
+                )}
               </div>
             );
           })()}
