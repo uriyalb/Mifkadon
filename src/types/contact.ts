@@ -37,4 +37,6 @@ export interface SwipeSession {
   currentIndex: number;
   chapterSizes: number[];   // contacts per chapter (8 chapters, increasing size)
   currentChapter: number;   // 0-indexed chapter the user is currently in
+  totalSecondsSpent: number;    // cumulative seconds spent swiping across all chapters
+  sessionStartSorted: number;   // contacts sorted when this browser session began
 }
