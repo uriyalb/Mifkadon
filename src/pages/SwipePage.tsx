@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useMotionValue, AnimatePresence } from 'framer-motion';
+import { useMotionValue, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
@@ -39,6 +39,22 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
+  const [dragStartY, setDragStartY] = useState<number | null>(null);
+  const cardAreaRef = useRef<HTMLDivElement>(null);
+
+  // Capture touch start Y for positioning priority zones near the finger
+  useEffect(() => {
+    const el = cardAreaRef.current;
+    if (!el) return;
+    const handler = (e: PointerEvent) => setDragStartY(e.clientY);
+    el.addEventListener('pointerdown', handler);
+    return () => el.removeEventListener('pointerdown', handler);
+  }, []);
+
+  // Reset dragStartY when drag ends (card snaps back to x=0)
+  useMotionValueEvent(dragX, 'change', (x) => {
+    if (x === 0) setDragStartY(null);
+  });
 
   // Active chapter is managed locally so we control when it advances
   const [activeChapter, setActiveChapter] = useState(() => {
@@ -317,7 +333,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
       {chapterPhase === 'swiping' && (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative px-4">
-          <div className="relative w-[340px] max-w-[90vw]">
+          <div ref={cardAreaRef} className="relative w-[340px] max-w-[90vw]">
             <AnimatePresence>
               {remaining.length > 0 ? (
                 <CardStack
@@ -336,7 +352,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
       {/* Priority zones — full page overlay, above everything */}
       {chapterPhase === 'swiping' && (
-        <PriorityZones dragX={dragX} dragY={dragY} />
+        <PriorityZones dragX={dragX} dragY={dragY} dragStartY={dragStartY} />
       )}
 
       {/* Level summary overlay */}
