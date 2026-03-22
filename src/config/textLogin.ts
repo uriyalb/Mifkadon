@@ -24,4 +24,10 @@ export const LOGIN_TEXT = {
     blocked: 'חלון ההתחברות נחסם או נסגר. נסה שוב.',
     popupFailed: 'שגיאה בפתיחת חלון ההתחברות.',
   },
+  accessDenied: {
+    title: 'אין גישה',
+    message: 'המייל שלך לא נמצא ברשימת המורשים.\nפנה למנהל הקמפיין כדי לקבל גישה.',
+    whatsappButton: 'בקש גישה בוואטסאפ',
+    backButton: 'חזור להתחברות',
+  },
 } as const;
