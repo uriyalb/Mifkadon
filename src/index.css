@@ -119,12 +119,20 @@
   to   { background-position: 100% 0%; }
 }
 
-/* Sprite animation for Ilan_sprite.png (172×192, 2×2 grid — 4 frames) */
+/* Sprite animation for Ilan_sprite.png (344×288, 3×4 grid — 12 frames) */
 @keyframes ilan-ride-sprite {
-  0%    { background-position: 0%   0%;   }
-  25%   { background-position: 100% 0%;   }
-  50%   { background-position: 0%   100%; }
-  75%   { background-position: 100% 100%; }
+  0%       { background-position: 0%   0%;      }
+  8.3333%  { background-position: 50%  0%;      }
+  16.6667% { background-position: 100% 0%;      }
+  25%      { background-position: 0%   33.3333%;}
+  33.3333% { background-position: 50%  33.3333%;}
+  41.6667% { background-position: 100% 33.3333%;}
+  50%      { background-position: 0%   66.6667%;}
+  58.3333% { background-position: 50%  66.6667%;}
+  66.6667% { background-position: 100% 66.6667%;}
+  75%      { background-position: 0%   100%;    }
+  83.3333% { background-position: 50%  100%;    }
+  91.6667% { background-position: 100% 100%;    }
 }
 
 /* Parallax scroll layers — width:200% elements translate -50% to loop seamlessly */
