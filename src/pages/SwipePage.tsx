@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSession } from '../context/SessionContext';
 import type { Contact, Priority, ChapterStats } from '../types/contact';
-import { updateContactRow, clearContactRow } from '../services/googleSheets';
+import { updateContactRow, clearContactRow, syncTrackingSheet } from '../services/googleSheets';
+import type { TrackingStats } from '../services/googleSheets';
+import { NUM_CHAPTERS } from '../config/chapters';
 import CardStack from '../components/CardStack';
 import PriorityZones from '../components/PriorityZones';
 import TravelScene from '../components/TravelScene';
@@ -35,7 +37,7 @@ const MAX_HISTORY = 10;
 
 export default function SwipePage({ onFinish, onBack }: Props) {
   const { user } = useAuth();
-  const { session, spreadsheetId, swipeRight, swipeLeft, undoSwipe, setSyncState, chapterSizes } = useSession();
+  const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes } = useSession();
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -146,6 +148,30 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     [session]
   );
 
+  // Fire-and-forget tracking sheet sync after each interaction
+  const fireTrackingSync = useCallback(() => {
+    if (!user || !trackingSheetId || !session) return;
+    const totalContacts = session.contacts.length + session.selected.length + session.dismissed.length;
+    const totalApproved = session.selected.length;
+    const totalRejected = session.dismissed.length;
+    const stats: TrackingStats = {
+      userName: user.name,
+      userEmail: user.email,
+      totalContacts,
+      totalSorted: totalApproved + totalRejected,
+      totalApproved,
+      totalRejected,
+      currentChapter: (session.currentChapter ?? 0) + 1,
+      totalChapters: NUM_CHAPTERS,
+      highCount: session.selected.filter((c) => c.priority === 'high').length,
+      mediumCount: session.selected.filter((c) => c.priority === 'medium').length,
+      lowCount: session.selected.filter((c) => c.priority === 'low').length,
+      totalSecondsSpent: session.totalSecondsSpent ?? 0,
+      sessionSorted: (totalApproved + totalRejected) - (session.sessionStartSorted ?? 0),
+    };
+    syncTrackingSheet(user.accessToken, trackingSheetId, session.selected, stats);
+  }, [user, trackingSheetId, session]);
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
@@ -164,6 +190,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
 
   const handleChapterComplete = useCallback(() => {
     const elapsed = Math.round((Date.now() - chapterStartTimeRef.current) / 1000);
+    addTimeSpent(elapsed);
     const s = chapterStatsRef.current;
     setCompletedStats({
       kept: s.kept,
@@ -172,7 +199,7 @@ export default function SwipePage({ onFinish, onBack }: Props) {
       secondsElapsed: elapsed,
     });
     setChapterPhase('summary');
-  }, []);
+  }, [addTimeSpent]);
 
   const handleSwipeRight = useCallback((contact: Contact, priority: Priority) => {
     const rowIndex = getRowIndex(contact);
@@ -195,7 +222,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
         .then(() => setSyncState('idle'))
         .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeRight, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone]);
+    fireTrackingSync();
+  }, [swipeRight, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone, fireTrackingSync]);
 
   const handleSwipeLeft = useCallback((contact: Contact) => {
     const rowIndex = getRowIndex(contact);
@@ -217,7 +245,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
         .then(() => setSyncState('idle'))
         .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeLeft, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone]);
+    fireTrackingSync();
+  }, [swipeLeft, getRowIndex, user, spreadsheetId, setSyncState, handleChapterComplete, checkMilestone, fireTrackingSync]);
 
   const handleUndo = useCallback(() => {
     if (swipeHistory.length === 0) {
@@ -245,7 +274,8 @@ export default function SwipePage({ onFinish, onBack }: Props) {
         .then(() => setSyncState('idle'))
         .catch((e) => setSyncState('error', (e as Error).message));
     }
-  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState, showToast]);
+    fireTrackingSync();
+  }, [swipeHistory, undoSwipe, user, spreadsheetId, setSyncState, showToast, fireTrackingSync]);
 
   // Summary → Map (or Results for last chapter)
   const handleSummaryNext = useCallback(() => {

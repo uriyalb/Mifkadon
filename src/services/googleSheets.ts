@@ -411,3 +411,315 @@ export async function checkSheetsAccess(accessToken: string): Promise<boolean> {
     return false;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Shared tracking spreadsheet for group admin
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TRACKING_TITLE_PREFIX = 'רשימת פוטנציאל מפקד';
+const TRACKING_TAB1 = 'אנשי קשר מאושרים';
+const TRACKING_TAB2 = 'סיכום התקדמות';
+const TRACKING_TAB1_ENC = encodeURIComponent(TRACKING_TAB1);
+const TRACKING_TAB2_ENC = encodeURIComponent(TRACKING_TAB2);
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string;
+
+const PRIORITY_TO_NUMBER: Record<string, number> = { high: 1, medium: 2, low: 3 };
+
+const SOURCE_LABEL: Record<string, string> = {
+  google: 'ספר טלפונים',
+  phone: 'ספר טלפונים',
+  facebook: 'פייסבוק',
+  instagram: 'אינסטגרם',
+  manual: 'ידני',
+};
+
+// Debounce: skip sync if less than 2s since last sync
+let lastTrackingSyncTs = 0;
+
+// ─── Find existing tracking sheet ────────────────────────────────────────────
+export async function findExistingTrackingSheet(
+  accessToken: string,
+  userEmail: string
+): Promise<string | null> {
+  const title = `${TRACKING_TITLE_PREFIX} - ${userEmail}`;
+  const query = encodeURIComponent(
+    `name='${title}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`
+  );
+  const resp = await fetch(`${DRIVE_API}?q=${query}&fields=files(id,name)&pageSize=1`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return (data.files?.[0]?.id as string) ?? null;
+}
+
+// ─── Share spreadsheet with admin ────────────────────────────────────────────
+async function shareWithAdmin(accessToken: string, fileId: string): Promise<void> {
+  // Try owner transfer first, fall back to writer
+  const resp = await fetch(
+    `${DRIVE_API}/${fileId}/permissions?transferOwnership=true`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'user',
+        role: 'owner',
+        emailAddress: ADMIN_EMAIL,
+      }),
+    }
+  );
+  if (!resp.ok) {
+    // Fallback to writer role (owner transfer only works within same Workspace domain)
+    await fetch(`${DRIVE_API}/${fileId}/permissions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'user',
+        role: 'writer',
+        emailAddress: ADMIN_EMAIL,
+      }),
+    });
+  }
+}
+
+// ─── Create tracking sheet with two tabs ─────────────────────────────────────
+export async function createTrackingSheet(
+  accessToken: string,
+  userEmail: string
+): Promise<string> {
+  const title = `${TRACKING_TITLE_PREFIX} - ${userEmail}`;
+  const resp = await fetch(SHEETS_API, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      properties: { title, locale: 'iw_IL', timeZone: 'Asia/Jerusalem' },
+      sheets: [
+        { properties: { sheetId: 0, title: TRACKING_TAB1, index: 0 } },
+        { properties: { sheetId: 1, title: TRACKING_TAB2, index: 1 } },
+      ],
+    }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error((err as { error?: { message?: string } }).error?.message ?? 'Failed to create tracking sheet');
+  }
+  const data = await resp.json();
+  const sheetId = data.spreadsheetId as string;
+
+  // Write headers for contacts tab
+  const header = [
+    'שם',
+    'פוטנציאל למפקד (1-3)',
+    'מקור (ספר טלפונים, פייסבוק, אינסטגרם...)',
+    'מס׳ טלפון',
+    'ת. שיחה אחרון',
+    'סיכום שיחה',
+    'ת. שיחה הבא',
+    'התפקד/ה?',
+  ];
+  await fetch(
+    `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A1?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [header] }),
+    }
+  );
+
+  // Format both tabs
+  await fetch(`${SHEETS_API}/${sheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [
+        // Tab 1 header formatting
+        {
+          repeatCell: {
+            range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 1, green: 0.176, blue: 0.471 },
+                textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } },
+                horizontalAlignment: 'CENTER',
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+          },
+        },
+        {
+          updateSheetProperties: {
+            properties: { sheetId: 0, gridProperties: { frozenRowCount: 1, rtl: true } },
+            fields: 'gridProperties(frozenRowCount,rtl)',
+          },
+        },
+        {
+          autoResizeDimensions: {
+            dimensions: { sheetId: 0, dimension: 'COLUMNS', startIndex: 0, endIndex: 8 },
+          },
+        },
+        // Tab 2 RTL + frozen header
+        {
+          updateSheetProperties: {
+            properties: { sheetId: 1, gridProperties: { frozenRowCount: 1, rtl: true } },
+            fields: 'gridProperties(frozenRowCount,rtl)',
+          },
+        },
+        // Protect columns E-H in Tab 1 (admin-only manual tracking columns are NOT protected)
+        // Protect columns A-D (auto-synced from app)
+        {
+          addProtectedRange: {
+            protectedRange: {
+              range: { sheetId: 0, startColumnIndex: 0, endColumnIndex: 4 },
+              description: 'נתונים אוטומטיים - אל תערוך ידנית',
+              warningOnly: true,
+            },
+          },
+        },
+      ],
+    }),
+  }).catch(() => {});
+
+  // Share with admin
+  await shareWithAdmin(accessToken, sheetId);
+
+  return sheetId;
+}
+
+// ─── Stats for the summary tab ───────────────────────────────────────────────
+export interface TrackingStats {
+  userName: string;
+  userEmail: string;
+  totalContacts: number;
+  totalSorted: number;
+  totalApproved: number;
+  totalRejected: number;
+  currentChapter: number;
+  totalChapters: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  totalSecondsSpent: number;
+  sessionSorted: number;
+}
+
+// ─── Sync tracking sheet (debounced, fire-and-forget) ────────────────────────
+export function syncTrackingSheet(
+  accessToken: string,
+  trackingSheetId: string,
+  approved: SelectedContact[],
+  stats: TrackingStats
+): void {
+  const now = Date.now();
+  if (now - lastTrackingSyncTs < 2000) return;
+  lastTrackingSyncTs = now;
+
+  // Fire both syncs in parallel, don't await
+  syncTrackingContacts(accessToken, trackingSheetId, approved).catch(() => {});
+  syncTrackingSummary(accessToken, trackingSheetId, stats).catch(() => {});
+}
+
+// ─── Rebuild contacts tab on tracking sheet ──────────────────────────────────
+async function syncTrackingContacts(
+  accessToken: string,
+  sheetId: string,
+  approved: SelectedContact[]
+): Promise<void> {
+  // Clear data rows (keep header)
+  await fetch(
+    `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:H1000:clear`,
+    { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } }
+  ).catch(() => {});
+
+  if (approved.length === 0) return;
+
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const sorted = [...approved].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  const rows = sorted.map((c) => [
+    c.name,
+    PRIORITY_TO_NUMBER[c.priority] ?? 2,
+    SOURCE_LABEL[c.source] ?? c.source,
+    c.phone ?? '',
+    '', // ת. שיחה אחרון — blank for admin
+    '', // סיכום שיחה — blank for admin
+    '', // ת. שיחה הבא — blank for admin
+    '', // התפקד/ה? — blank for admin
+  ]);
+
+  await fetch(
+    `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    }
+  );
+}
+
+// ─── Update summary tab on tracking sheet ────────────────────────────────────
+async function syncTrackingSummary(
+  accessToken: string,
+  sheetId: string,
+  stats: TrackingStats
+): Promise<void> {
+  const approvalRate = stats.totalSorted > 0
+    ? `${Math.round((stats.totalApproved / stats.totalSorted) * 100)}%`
+    : '0%';
+  const minutesSpent = Math.round(stats.totalSecondsSpent / 60);
+  const now = new Date().toLocaleString('he-IL');
+
+  const rows = [
+    ['שם המשתמש', stats.userName],
+    ['אימייל', stats.userEmail],
+    ['', ''],
+    ['סה״כ אנשי קשר', stats.totalContacts],
+    ['סה״כ מוינו', stats.totalSorted],
+    ['סה״כ אושרו', stats.totalApproved],
+    ['סה״כ נדחו', stats.totalRejected],
+    ['אחוז אישור', approvalRate],
+    ['', ''],
+    ['פרק נוכחי', `${stats.currentChapter}/${stats.totalChapters}`],
+    ['פוטנציאל גבוה (1)', stats.highCount],
+    ['פוטנציאל בינוני (2)', stats.mediumCount],
+    ['פוטנציאל נמוך (3)', stats.lowCount],
+    ['', ''],
+    ['זמן כולל (דקות)', minutesSpent],
+    ['מוינו בסשן אחרון', stats.sessionSorted],
+    ['סשן אחרון', now],
+  ];
+
+  await fetch(
+    `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB2_ENC}!A1?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    }
+  );
+
+  // Format: bold labels column, auto-resize
+  await fetch(`${SHEETS_API}/${sheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [
+        {
+          repeatCell: {
+            range: { sheetId: 1, startColumnIndex: 0, endColumnIndex: 1 },
+            cell: {
+              userEnteredFormat: {
+                textFormat: { bold: true },
+              },
+            },
+            fields: 'userEnteredFormat(textFormat)',
+          },
+        },
+        {
+          autoResizeDimensions: {
+            dimensions: { sheetId: 1, dimension: 'COLUMNS', startIndex: 0, endIndex: 2 },
+          },
+        },
+      ],
+    }),
+  }).catch(() => {});
+}

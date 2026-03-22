@@ -15,6 +15,8 @@ import {
   appendContactsToSheet,
   loadAllContactsWithStatus,
   protectProgressColumns,
+  findExistingTrackingSheet,
+  createTrackingSheet,
 } from '../services/googleSheets';
 import Header from '../components/Header';
 import { IMPORT_TEXT } from '../config/textImport';
@@ -56,7 +58,7 @@ const SOURCE_COLOR: Record<SourceKey, string> = {
 
 export default function ImportPage({ onStart }: Props) {
   const { user } = useAuth();
-  const { initSession, restoreSession, setSpreadsheetId, resetSession } = useSession();
+  const { initSession, restoreSession, setSpreadsheetId, setTrackingSheetId, resetSession } = useSession();
 
   const [sources, setSources] = useState<Record<SourceKey, SourceState>>({
     google:    { status: 'idle', count: 0 },
@@ -195,6 +197,23 @@ export default function ImportPage({ onStart }: Props) {
 
   // ── Resume ────────────────────────────────────────────────────────────────
 
+  // Ensure tracking sheet exists (find or create), fire-and-forget style
+  const ensureTrackingSheet = async () => {
+    if (!user) return;
+    try {
+      const existingTrackingId = await findExistingTrackingSheet(user.accessToken, user.email);
+      if (existingTrackingId) {
+        setTrackingSheetId(existingTrackingId);
+      } else {
+        const trackingId = await createTrackingSheet(user.accessToken, user.email);
+        setTrackingSheetId(trackingId);
+      }
+    } catch {
+      // Non-critical: tracking sheet failure should not block the user
+      console.warn('[import] Failed to create/find tracking sheet');
+    }
+  };
+
   const handleResume = async () => {
     if (!user || !resumeInfo) return;
     setIsStarting(true);
@@ -202,6 +221,7 @@ export default function ImportPage({ onStart }: Props) {
       const data = await loadAllContactsWithStatus(user.accessToken, resumeInfo.spreadsheetId);
       setSpreadsheetId(resumeInfo.spreadsheetId);
       restoreSession(data);
+      ensureTrackingSheet();
       onStart();
     } catch {
       setIsStarting(false);
@@ -252,6 +272,7 @@ export default function ImportPage({ onStart }: Props) {
         setSpreadsheetId(sheetId);
         setSavedCount(allContacts.length);
       }
+      ensureTrackingSheet();
     } catch (e) {
       const msg = (e as Error).message ?? '';
       if (msg.includes('has not been used') || msg.includes('is disabled') || msg.includes('SERVICE_DISABLED')) {

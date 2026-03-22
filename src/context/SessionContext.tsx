@@ -21,6 +21,7 @@ export interface RestoreData {
 interface SessionContextType {
   session: SwipeSession | null;
   spreadsheetId: string | null;
+  trackingSheetId: string | null;
   syncStatus: SyncStatus;
   syncError: string | null;
   currentChapter: number;
@@ -32,7 +33,9 @@ interface SessionContextType {
   swipeRight: (contact: Contact, priority: Priority) => void;
   swipeLeft: (contact: Contact) => void;
   undoSwipe: (contact: Contact, direction: 'right' | 'left') => void;
+  addTimeSpent: (seconds: number) => void;
   setSpreadsheetId: (id: string) => void;
+  setTrackingSheetId: (id: string) => void;
   resetSession: () => void;
 }
 
@@ -40,16 +43,24 @@ const SessionContext = createContext<SessionContextType | null>(null);
 
 export const SESSION_DATA_KEY = '__sb_data_v1';
 export const SPREADSHEET_KEY = '__sb_sid_v1';
+export const TRACKING_SHEET_KEY = '__sb_tsid_v1';
 
-// Back-fill chapter data onto sessions saved before the chapter system existed.
-// Recomputes chapter sizes from the existing contact list and derives the current
-// chapter from how many swipes have already been made.
+// Back-fill chapter data and new tracking fields onto older sessions.
 function migrateSession(s: SwipeSession): SwipeSession {
-  if (s.chapterSizes && s.chapterSizes.length > 0) return s;
-  const chapterSizes = computeChapterSizes(s.contacts.length);
-  const processed = s.selected.length + s.dismissed.length;
-  const currentChapter = computeCurrentChapter(processed, chapterSizes);
-  return { ...s, chapterSizes, currentChapter };
+  let migrated = s;
+  if (!migrated.chapterSizes || migrated.chapterSizes.length === 0) {
+    const chapterSizes = computeChapterSizes(migrated.contacts.length);
+    const processed = migrated.selected.length + migrated.dismissed.length;
+    const currentChapter = computeCurrentChapter(processed, chapterSizes);
+    migrated = { ...migrated, chapterSizes, currentChapter };
+  }
+  if (migrated.totalSecondsSpent == null) {
+    migrated = { ...migrated, totalSecondsSpent: 0 };
+  }
+  if (migrated.sessionStartSorted == null) {
+    migrated = { ...migrated, sessionStartSorted: migrated.selected.length + migrated.dismissed.length };
+  }
+  return migrated;
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -80,6 +91,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  const [trackingSheetId, setTrackingSheetIdState] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem(TRACKING_SHEET_KEY);
+      return stored ? decodeString(stored) : null;
+    } catch (err) {
+      console.warn('[session] Failed to restore tracking sheet ID:', err);
+      localStorage.removeItem(TRACKING_SHEET_KEY);
+      return null;
+    }
+  });
+
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -105,6 +127,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       currentIndex: 0,
       chapterSizes,
       currentChapter: 0,
+      totalSecondsSpent: 0,
+      sessionStartSorted: 0,
     };
     persist(s);
   };
@@ -135,6 +159,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       currentIndex: 0,
       chapterSizes,
       currentChapter,
+      totalSecondsSpent: session?.totalSecondsSpent ?? 0,
+      sessionStartSorted: processed,
     };
     persist(s);
   };
@@ -215,16 +241,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     persist(updated);
   };
 
+  const addTimeSpent = (seconds: number) => {
+    if (!session) return;
+    persist({
+      ...session,
+      totalSecondsSpent: (session.totalSecondsSpent ?? 0) + seconds,
+    });
+  };
+
   const setSpreadsheetId = (id: string) => {
     localStorage.setItem(SPREADSHEET_KEY, encodeString(id));
     setSpreadsheetIdState(id);
   };
 
+  const setTrackingSheetId = (id: string) => {
+    localStorage.setItem(TRACKING_SHEET_KEY, encodeString(id));
+    setTrackingSheetIdState(id);
+  };
+
   const resetSession = () => {
     localStorage.removeItem(SESSION_DATA_KEY);
     localStorage.removeItem(SPREADSHEET_KEY);
+    localStorage.removeItem(TRACKING_SHEET_KEY);
     setSession(null);
     setSpreadsheetIdState(null);
+    setTrackingSheetIdState(null);
   };
 
   const currentChapter = session?.currentChapter ?? 0;
@@ -235,6 +276,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       value={{
         session,
         spreadsheetId,
+        trackingSheetId,
         syncStatus,
         syncError,
         currentChapter,
@@ -246,7 +288,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         swipeRight,
         swipeLeft,
         undoSwipe,
+        addTimeSpent,
         setSpreadsheetId,
+        setTrackingSheetId,
         resetSession,
       }}
     >
