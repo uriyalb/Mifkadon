@@ -204,7 +204,7 @@ export default function JourneyMap({ completedChapter, cities, onContinue, isLas
             width: 40,
             height: 48,
             backgroundImage: 'url(/Ilan_sprite.png)',
-            backgroundSize: '300% 400%',
+            backgroundSize: '400% 300%',
             backgroundPosition: '0% 0%',
             backgroundRepeat: 'no-repeat',
             animation: 'ilan-ride-sprite 2s steps(1) infinite',

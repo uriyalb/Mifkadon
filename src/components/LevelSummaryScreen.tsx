@@ -143,7 +143,7 @@ export default function LevelSummaryScreen({
           width: 86,
           height: 96,
           backgroundImage: 'url(/Ilan_sprite.png)',
-          backgroundSize: '300% 400%',
+          backgroundSize: '400% 300%',
           backgroundPosition: '0% 0%',
           backgroundRepeat: 'no-repeat',
           imageRendering: 'pixelated',

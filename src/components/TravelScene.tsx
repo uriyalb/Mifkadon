@@ -144,7 +144,7 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
             left: `clamp(4px, calc(${clampedPct}% - 43px), calc(100% - 90px))`,
             transition: 'left 300ms ease-out',
             backgroundImage: 'url(/Ilan_sprite.png)',
-            backgroundSize: '300% 400%',
+            backgroundSize: '400% 300%',
             backgroundRepeat: 'no-repeat',
             animation: 'ilan-ride-sprite 2s steps(1) infinite',
             imageRendering: 'pixelated',
