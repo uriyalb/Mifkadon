@@ -211,7 +211,10 @@ export default function SwipePage({ onFinish, onBack }: Props) {
     setSyncState('syncing');
     flushContactRowUpdates(user.accessToken, spreadsheetId)
       .then(() => setSyncState('idle'))
-      .catch((e) => setSyncState('error', (e as Error).message));
+      .catch((e) => {
+        console.error('[sync] flushContactRowUpdates failed:', e);
+        setSyncState('error', (e as Error).message);
+      });
     fireTrackingSync();
   }, [user, spreadsheetId, setSyncState, fireTrackingSync]);
 
