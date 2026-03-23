@@ -79,6 +79,8 @@ export default function ImportPage({ onStart }: Props) {
   const [showManual, setShowManual] = useState(false);
   const [resumeInfo, setResumeInfo] = useState<{ spreadsheetId: string; pending: number; processed: number; total: number } | null>(null);
   const [checkingResume, setCheckingResume] = useState(true);
+  // Whether the user chose to add new contacts instead of resuming
+  const [showNewImport, setShowNewImport] = useState(false);
 
   const facebookInputRef = useRef<HTMLInputElement>(null);
   const instagramInputRef = useRef<HTMLInputElement>(null);
@@ -287,7 +289,7 @@ export default function ImportPage({ onStart }: Props) {
     }
   };
 
-  // ── Start sorting ─────────────────────────────────────────────────────────
+  // ── Start sorting (only after saving) ────────────────────────────────────
 
   const handleStart = () => {
     if (allContacts.length === 0) return;
@@ -299,36 +301,163 @@ export default function ImportPage({ onStart }: Props) {
   const totalContacts = allContacts.length;
   const isSaved = savedCount !== null;
 
+  // ── Loading splash screen ─────────────────────────────────────────────────
+
+  if (checkingResume) {
+    return (
+      <div
+        className="h-[100dvh] flex flex-col items-center justify-center gap-6"
+        style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}
+      >
+        {/* Animated Ilan sprite */}
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            width: 86,
+            height: 96,
+            backgroundImage: 'url(/Ilan_sprite.png)',
+            backgroundSize: '400% 300%',
+            backgroundPosition: '0% 0%',
+            backgroundRepeat: 'no-repeat',
+            imageRendering: 'pixelated',
+            filter: 'drop-shadow(0 6px 16px rgba(255, 107, 53, 0.5))',
+            animation: 'ilan-ride-sprite 2s linear infinite',
+          }}
+        />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" style={{ borderWidth: 3 }} />
+          <p className="text-white font-bold text-base">בודק נתונים קיימים...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Hero resume screen (when existing progress found) ────────────────────
+
+  if (resumeInfo && !showNewImport) {
+    const pct = resumeInfo.total > 0 ? Math.round((resumeInfo.processed / resumeInfo.total) * 100) : 0;
+    return (
+      <div className="h-[100dvh] flex flex-col" dir="rtl" style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}>
+        <Header />
+        <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2 flex flex-col">
+          {/* Hero resume card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="rounded-3xl p-6 mb-4 text-center shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.12) 100%)',
+              border: '1.5px solid rgba(255,255,255,0.35)',
+              backdropFilter: 'blur(12px)',
+            }}
+          >
+            {/* Ilan sprite */}
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="mx-auto mb-4"
+              style={{
+                width: 86,
+                height: 96,
+                backgroundImage: 'url(/Ilan_sprite.png)',
+                backgroundSize: '400% 300%',
+                backgroundPosition: '0% 0%',
+                backgroundRepeat: 'no-repeat',
+                imageRendering: 'pixelated',
+                filter: 'drop-shadow(0 6px 16px rgba(255, 107, 53, 0.5))',
+                animation: 'ilan-ride-sprite 2s linear infinite',
+              }}
+            />
+
+            <h2 className="text-2xl font-black text-white mb-1 drop-shadow">ברוכים השבים!</h2>
+            <p className="text-white/80 text-sm mb-5 leading-relaxed">
+              {IMPORT_TEXT.resume.title} — {IMPORT_TEXT.resume.info(resumeInfo.processed, resumeInfo.total, resumeInfo.pending)}
+            </p>
+
+            {/* Progress bar */}
+            <div className="mb-5">
+              <div className="flex justify-between text-xs text-white/70 mb-1.5 font-medium">
+                <span>{resumeInfo.processed} מוינו</span>
+                <span>{pct}%</span>
+                <span>{resumeInfo.pending} נשארו</span>
+              </div>
+              <div className="h-3 rounded-full bg-white/20 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+                  className="h-full rounded-full"
+                  style={{ background: 'linear-gradient(90deg, #FFD700, #FF6B35)' }}
+                />
+              </div>
+            </div>
+
+            {/* Stats pills */}
+            <div className="flex justify-center gap-3 mb-5">
+              <div className="px-3 py-2 rounded-2xl text-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                <p className="text-xl font-black text-white">{resumeInfo.total}</p>
+                <p className="text-white/70 text-[11px]">סה״כ אנשי קשר</p>
+              </div>
+              <div className="px-3 py-2 rounded-2xl text-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                <p className="text-xl font-black text-white">{resumeInfo.processed}</p>
+                <p className="text-white/70 text-[11px]">מוינו</p>
+              </div>
+              <div className="px-3 py-2 rounded-2xl text-center" style={{ background: 'rgba(255,215,0,0.25)' }}>
+                <p className="text-xl font-black text-white">{resumeInfo.pending}</p>
+                <p className="text-white/70 text-[11px]">ממתינים</p>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleResume}
+              disabled={isStarting}
+              className="w-full text-white font-black py-4 rounded-2xl text-lg shadow-xl disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #E53935, #B71C1C)',
+                boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
+              }}
+            >
+              {isStarting ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>המשך מהיכן שהפסקת</span>
+                  <span className="text-xl">←</span>
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+
+          {/* Divider to add more contacts */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-center"
+          >
+            <button
+              onClick={() => setShowNewImport(true)}
+              className="text-white/60 text-sm underline underline-offset-2 hover:text-white/90 transition-colors"
+            >
+              + הוסף עוד אנשי קשר ממקור חדש
+            </button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Standard import screen ────────────────────────────────────────────────
+
   return (
     <div className="h-[100dvh] flex flex-col" dir="rtl" style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}>
       <Header />
 
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
-
-        {/* Resume banner */}
-        <AnimatePresence>
-          {!checkingResume && resumeInfo && (
-            <motion.div
-              initial={{ opacity: 0, y: -16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              className="glass rounded-2xl p-4 mb-4 border-2 border-[#E53935]/30"
-            >
-              <p className="font-bold text-gray-800 text-sm mb-0.5">{IMPORT_TEXT.resume.title}</p>
-              <p className="text-gray-500 text-xs mb-3">
-                {IMPORT_TEXT.resume.info(resumeInfo.processed, resumeInfo.total, resumeInfo.pending)}
-              </p>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={handleResume}
-                disabled={isStarting}
-                className="w-full gradient-pink text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
-              >
-                {IMPORT_TEXT.resume.button}
-              </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <h2 className="text-white font-bold text-xl mb-4">{IMPORT_TEXT.title}</h2>
 
@@ -531,7 +660,6 @@ export default function ImportPage({ onStart }: Props) {
                 <p className="text-gray-500 text-sm">{IMPORT_TEXT.ready.subtitle}</p>
               </div>
 
-              {/* Save state */}
               {isSaved ? (
                 /* Already saved — show confirmation and Start button */
                 <div className="space-y-3">
@@ -559,7 +687,7 @@ export default function ImportPage({ onStart }: Props) {
                   </motion.button>
                 </div>
               ) : (
-                /* Not saved yet — primary: Save, secondary: Start without saving */
+                /* Not saved yet — show Save to Google Sheets button only */
                 <div className="space-y-2">
                   {saveError && (
                     <div className="glass rounded-xl p-3 border border-red-200">
@@ -587,21 +715,13 @@ export default function ImportPage({ onStart }: Props) {
                       </>
                     ) : IMPORT_TEXT.ready.startWithSheetsButton}
                   </motion.button>
-
-                  <button
-                    onClick={handleStart}
-                    disabled={isStarting}
-                    className="w-full glass text-gray-600 font-bold py-3 rounded-2xl text-sm hover:bg-white/70 transition-all disabled:opacity-60"
-                  >
-                    {IMPORT_TEXT.ready.startWithoutSheetsButton}
-                  </button>
                 </div>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {totalContacts === 0 && !checkingResume && (
+        {totalContacts === 0 && (
           <p className="text-white/70 text-center text-sm mt-4">
             {IMPORT_TEXT.emptyState}
           </p>

@@ -115,37 +115,98 @@ export default function LoginPage({ onLogin }: Props) {
 
   // ── Normal login screen ───────────────────────────────────────────────────
   return (
-    <div className="h-[100dvh] flex flex-col items-center justify-center p-6" dir="rtl" style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}>
+    <div
+      className="h-[100dvh] flex flex-col items-center justify-center p-6 overflow-hidden"
+      dir="rtl"
+      style={{ background: 'linear-gradient(160deg, #B71C1C 0%, #E53935 30%, #EF5350 60%, #FFCDD2 85%, #FFF5F5 100%)' }}
+    >
+      {/* Decorative background blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, #FF6BA8, transparent)' }} />
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full opacity-15" style={{ background: 'radial-gradient(circle, #FFD700, transparent)' }} />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="w-full max-w-sm text-center"
+        className="w-full max-w-sm text-center relative z-10"
       >
-        {/* Logo */}
+        {/* Ilan character sprite — large, centered hero image */}
         <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          className="w-24 h-24 rounded-3xl gradient-pink mx-auto mb-6 flex items-center justify-center shadow-2xl"
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          className="mx-auto mb-4 relative"
+          style={{ width: 120, height: 135 }}
         >
-          <span className="text-5xl font-black text-white">{LOGIN_TEXT.logo}</span>
+          {/* Glow behind sprite */}
+          <div
+            className="absolute inset-0 rounded-full blur-2xl opacity-50"
+            style={{ background: 'radial-gradient(circle, rgba(255,215,0,0.6), transparent)', transform: 'scale(1.5)' }}
+          />
+          <div
+            style={{
+              width: 120,
+              height: 135,
+              backgroundImage: 'url(/Ilan_sprite.png)',
+              backgroundSize: '400% 300%',
+              backgroundPosition: '0% 0%',
+              backgroundRepeat: 'no-repeat',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 8px 20px rgba(255, 107, 53, 0.5))',
+              animation: 'ilan-ride-sprite 2s linear infinite',
+            }}
+          />
         </motion.div>
 
-        <h1 className="text-4xl font-black text-white mb-2 drop-shadow-lg">{LOGIN_TEXT.title}</h1>
-        <p className="text-white/90 text-lg mb-2 font-medium">{LOGIN_TEXT.subtitle}</p>
-        <p className="text-white/70 text-sm mb-10 leading-relaxed whitespace-pre-line">
-          {LOGIN_TEXT.description}
-        </p>
+        {/* Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.5 }}
+          className="text-5xl font-black text-white mb-1 drop-shadow-lg tracking-tight"
+        >
+          {LOGIN_TEXT.title}
+        </motion.h1>
 
-        {/* Features */}
-        <div className="glass rounded-2xl p-4 mb-6 text-right space-y-2.5">
-          {LOGIN_TEXT.features.map((text) => (
-            <div key={text} className="flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-              <span className="text-gray-700 text-sm">{text}</span>
-            </div>
-          ))}
-        </div>
+        {/* Tagline — key phrase */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.25, duration: 0.5, type: 'spring', stiffness: 200 }}
+          className="inline-block mb-2"
+        >
+          <span
+            className="text-lg font-black px-4 py-1.5 rounded-full"
+            style={{
+              background: 'linear-gradient(135deg, #FFD700, #FF6B35)',
+              color: '#7B1C1C',
+              boxShadow: '0 4px 16px rgba(255, 215, 0, 0.35)',
+            }}
+          >
+            {LOGIN_TEXT.tagline}
+          </span>
+        </motion.div>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+          className="text-white/90 text-base mb-2 font-medium"
+        >
+          {LOGIN_TEXT.subtitle}
+        </motion.p>
+
+        {/* Description */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-white/70 text-sm mb-6 leading-relaxed whitespace-pre-line"
+        >
+          {LOGIN_TEXT.description}
+        </motion.p>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
@@ -153,7 +214,11 @@ export default function LoginPage({ onLogin }: Props) {
           </div>
         )}
 
+        {/* Google login button */}
         <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => {
@@ -162,7 +227,8 @@ export default function LoginPage({ onLogin }: Props) {
             try { login(); } catch { setError(LOGIN_TEXT.errors.popupFailed); setIsLoading(false); }
           }}
           disabled={isLoading}
-          className="w-full bg-white text-gray-700 font-bold py-4 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-3 text-base disabled:opacity-60 transition-all"
+          className="w-full bg-white text-gray-700 font-bold py-4 px-6 rounded-2xl shadow-xl flex items-center justify-center gap-3 text-base disabled:opacity-60 transition-all"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}
         >
           {isLoading ? (
             <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -178,12 +244,16 @@ export default function LoginPage({ onLogin }: Props) {
         </motion.button>
 
         <div className="relative my-4 flex items-center gap-3">
-          <div className="flex-1 h-px bg-white/20" />
+          <div className="flex-1 h-px bg-white/25" />
           <span className="text-white/40 text-xs">{LOGIN_TEXT.or}</span>
-          <div className="flex-1 h-px bg-white/20" />
+          <div className="flex-1 h-px bg-white/25" />
         </div>
 
+        {/* Demo button */}
         <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.4 }}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => { enterDemoMode(); onLogin(); }}
@@ -192,9 +262,14 @@ export default function LoginPage({ onLogin }: Props) {
           {LOGIN_TEXT.demoButton(mockContacts.length)}
         </motion.button>
 
-        <p className="text-white/50 text-xs mt-4 leading-relaxed whitespace-pre-line">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="text-white/40 text-xs mt-4 leading-relaxed whitespace-pre-line"
+        >
           {LOGIN_TEXT.disclaimer}
-        </p>
+        </motion.p>
       </motion.div>
     </div>
   );

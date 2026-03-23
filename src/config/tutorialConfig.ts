@@ -32,7 +32,8 @@ export const MECHANIC_LABELS = {
 
 export type WalkthroughAction =
   | { type: 'keep'; priority: Priority }
-  | { type: 'skip' };
+  | { type: 'skip' }
+  | { type: 'registered' };
 
 export interface WalkthroughCard {
   contact: Contact;
@@ -65,6 +66,11 @@ export const WALKTHROUGH_CARDS: WalkthroughCard[] = [
     contact: { id: 'tut-5', name: 'לא רלוונטי', phone: '058-5555555', source: 'google' },
     correctAction: { type: 'skip' },
     hint: 'גררו שמאלה כדי לדלג',
+  },
+  {
+    contact: { id: 'tut-6', name: 'פקוד מרשימה', phone: '056-6666666', source: 'manual' },
+    correctAction: { type: 'registered' },
+    hint: 'החלק למעלה — כבר פקוד ברשימה',
   },
 ];
 
