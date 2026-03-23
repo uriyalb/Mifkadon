@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const DEBUG = import.meta.env.VITE_DEBUG_CONFETTI === 'true';
+import { DEBUG_CONFETTI as DEBUG } from '../config/debug';
 
 const COLORS = ['#2196F3', '#64B5F6', '#FFD700', '#E53935', '#22C55E', '#42A5F5', '#BBDEFB', '#FFF176'];
 const PARTICLE_COUNT = 100;
