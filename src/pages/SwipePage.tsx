@@ -7,6 +7,7 @@ import type { Contact, Priority, ChapterStats, ContactTrackingData } from '../ty
 import {
   queueContactRowUpdate, shouldFlush, flushContactRowUpdates, hasPendingUpdates,
   clearContactRow, syncTrackingSheet, loadTrackingData,
+  saveProgressTab, ensureProgressTab,
 } from '../services/googleSheets';
 import type { TrackingStats } from '../services/googleSheets';
 import ProgressDashboard from '../components/ProgressDashboard';
@@ -44,7 +45,7 @@ const MAX_HISTORY = 10;
 
 export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
   const { user } = useAuth();
-  const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes } = useSession();
+  const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes, getProgressSnapshot } = useSession();
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -113,6 +114,25 @@ export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
   const [showDashboard, setShowDashboard] = useState(false);
   const [dashboardTrackingData, setDashboardTrackingData] = useState<Map<string, ContactTrackingData> | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
+
+  // Save progress to the hidden Google Sheets tab (fire-and-forget)
+  const saveProgress = useCallback(() => {
+    if (!user || !spreadsheetId) return;
+    const snap = getProgressSnapshot();
+    if (!snap) return;
+    saveProgressTab(user.accessToken, spreadsheetId, snap).catch(() => {});
+  }, [user, spreadsheetId, getProgressSnapshot]);
+
+  // Save progress on mount (captures initial chapter sizes for new sessions)
+  // and ensure progress tab exists (migration for old spreadsheets)
+  const progressSavedRef = useRef(false);
+  useEffect(() => {
+    if (progressSavedRef.current || !user || !spreadsheetId || !session) return;
+    progressSavedRef.current = true;
+    ensureProgressTab(user.accessToken, spreadsheetId)
+      .then(() => saveProgress())
+      .catch(() => {});
+  }, [user, spreadsheetId, session, saveProgress]);
 
   const openDashboard = useCallback(() => {
     setShowDashboard(true);
@@ -252,7 +272,9 @@ export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
     setChapterPhase('summary');
     // Force-flush any remaining queued updates at chapter boundary
     tryFlush(true);
-  }, [addTimeSpent, tryFlush]);
+    // Save chapter progress to the hidden sheet tab
+    saveProgress();
+  }, [addTimeSpent, tryFlush, saveProgress]);
 
   const handleSwipeRight = useCallback((contact: Contact, priority: Priority) => {
     const rowIndex = getRowIndex(contact);

@@ -47,4 +47,16 @@ export interface SwipeSession {
   currentChapter: number;   // 0-indexed chapter the user is currently in
   totalSecondsSpent: number;    // cumulative seconds spent swiping across all chapters
   sessionStartSorted: number;   // contacts sorted when this browser session began
+  walkthroughComplete?: boolean; // true after the user finishes the walkthrough
+}
+
+/** Progress data persisted in a hidden Google Sheets tab (encoded, not plain text). */
+export interface ProgressTabData {
+  version: number;
+  chapterSizes: number[];
+  currentChapter: number;
+  walkthroughComplete: boolean;
+  totalSecondsSpent: number;
+  sessionStartSorted: number;
+  updatedAt: string;
 }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react';
-import type { Contact, SelectedContact, SwipeSession, Priority } from '../types/contact';
+import type { Contact, SelectedContact, SwipeSession, Priority, ProgressTabData } from '../types/contact';
 import { useAuth } from './AuthContext';
 import { encode, decode, encodeString, decodeString } from '../utils/store';
 import {
@@ -28,7 +28,7 @@ interface SessionContextType {
   chapterSizes: number[];
   setSyncState: (status: SyncStatus, error?: string) => void;
   initSession: (contacts: Contact[]) => void;
-  restoreSession: (data: RestoreData) => void;
+  restoreSession: (data: RestoreData, progressFromSheet?: ProgressTabData | null) => void;
   expandSession: (newContacts: Contact[]) => void;
   swipeRight: (contact: Contact, priority: Priority) => void;
   swipeLeft: (contact: Contact) => void;
@@ -36,6 +36,8 @@ interface SessionContextType {
   addTimeSpent: (seconds: number) => void;
   setSpreadsheetId: (id: string) => void;
   setTrackingSheetId: (id: string) => void;
+  setWalkthroughComplete: () => void;
+  getProgressSnapshot: () => ProgressTabData | null;
   resetSession: () => void;
 }
 
@@ -59,6 +61,10 @@ function migrateSession(s: SwipeSession): SwipeSession {
   }
   if (migrated.sessionStartSorted == null) {
     migrated = { ...migrated, sessionStartSorted: migrated.selected.length + migrated.dismissed.length };
+  }
+  if (migrated.walkthroughComplete == null) {
+    // Existing user who already has a session likely completed the walkthrough
+    migrated = { ...migrated, walkthroughComplete: true };
   }
   return migrated;
 }
@@ -129,22 +135,43 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       currentChapter: 0,
       totalSecondsSpent: 0,
       sessionStartSorted: 0,
+      walkthroughComplete: false,
     };
     persist(s);
   };
 
-  const restoreSession = (data: RestoreData) => {
+  const restoreSession = (data: RestoreData, progressFromSheet?: ProgressTabData | null) => {
     if (!user) return;
     const totalContacts = data.allContacts.length;
     const processed = data.selected.length + data.dismissedIds.length;
 
-    // If there's existing progress, lock completed chapters and redistribute
-    // remaining contacts. Otherwise compute fresh chapter sizes.
+    // Priority for chapter sizes: sheet > localStorage > fresh computation.
+    // When contacts were added (total changed), recalculate from scratch.
     let chapterSizes: number[];
     let currentChapter: number;
-    if (processed > 0 && session?.chapterSizes?.length) {
-      currentChapter = session.currentChapter;
-      chapterSizes = redistributeChapters(session.chapterSizes, currentChapter, totalContacts);
+
+    const sheetSizesSum = progressFromSheet?.chapterSizes?.reduce((a, b) => a + b, 0) ?? 0;
+    const localSizesSum = session?.chapterSizes?.reduce((a, b) => a + b, 0) ?? 0;
+
+    if (progressFromSheet?.chapterSizes?.length) {
+      if (sheetSizesSum !== totalContacts) {
+        // Contacts changed since last save — redistribute (lock completed chapters)
+        currentChapter = progressFromSheet.currentChapter;
+        chapterSizes = redistributeChapters(progressFromSheet.chapterSizes, currentChapter, totalContacts);
+      } else {
+        // Sheet sizes match — use as-is (immutable)
+        chapterSizes = progressFromSheet.chapterSizes;
+        currentChapter = progressFromSheet.currentChapter;
+      }
+    } else if (processed > 0 && session?.chapterSizes?.length) {
+      if (localSizesSum !== totalContacts) {
+        // Contacts changed since localStorage snapshot — redistribute
+        currentChapter = session.currentChapter;
+        chapterSizes = redistributeChapters(session.chapterSizes, currentChapter, totalContacts);
+      } else {
+        currentChapter = session.currentChapter;
+        chapterSizes = session.chapterSizes;
+      }
     } else {
       chapterSizes = computeChapterSizes(totalContacts);
       currentChapter = computeCurrentChapter(processed, chapterSizes);
@@ -159,8 +186,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       currentIndex: 0,
       chapterSizes,
       currentChapter,
-      totalSecondsSpent: session?.totalSecondsSpent ?? 0,
+      totalSecondsSpent: progressFromSheet?.totalSecondsSpent ?? session?.totalSecondsSpent ?? 0,
       sessionStartSorted: processed,
+      walkthroughComplete: progressFromSheet?.walkthroughComplete ?? session?.walkthroughComplete ?? (processed > 0),
     };
     persist(s);
   };
@@ -259,6 +287,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setTrackingSheetIdState(id);
   };
 
+  const setWalkthroughComplete = () => {
+    if (!session) return;
+    persist({ ...session, walkthroughComplete: true });
+  };
+
+  /** Build a snapshot of progress data suitable for saving to the progress tab. */
+  const getProgressSnapshot = (): ProgressTabData | null => {
+    if (!session) return null;
+    return {
+      version: 1,
+      chapterSizes: session.chapterSizes,
+      currentChapter: session.currentChapter,
+      walkthroughComplete: session.walkthroughComplete ?? false,
+      totalSecondsSpent: session.totalSecondsSpent,
+      sessionStartSorted: session.sessionStartSorted,
+      updatedAt: new Date().toISOString(),
+    };
+  };
+
   const resetSession = () => {
     localStorage.removeItem(SESSION_DATA_KEY);
     localStorage.removeItem(SPREADSHEET_KEY);
@@ -291,6 +338,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         addTimeSpent,
         setSpreadsheetId,
         setTrackingSheetId,
+        setWalkthroughComplete,
+        getProgressSnapshot,
         resetSession,
       }}
     >

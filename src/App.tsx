@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SessionProvider, useSession, SESSION_DATA_KEY, SPREADSHEET_KEY } from './context/SessionContext'
+import { decode } from './utils/store'
 import LoginPage from './pages/LoginPage'
 import ImportPage from './pages/ImportPage'
 import SwipePage from './pages/SwipePage'
@@ -56,6 +57,7 @@ function AppRouter() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [walkthroughActive, setWalkthroughActive] = useState(false)
   const [walkthroughPhase, setWalkthroughPhase] = useState<WalkthroughPhase>('overlay')
+  const [isWalkthroughRetake, setIsWalkthroughRetake] = useState(false)
   const tutorialShownRef = useRef(false)
 
   useEffect(() => {
@@ -69,16 +71,24 @@ function AppRouter() {
   }, [user])
 
   // Auto-show walkthrough for first-time users when entering the swipe page.
-  // Returning users (who already have a spreadsheet) see the TutorialModal via
-  // the help button only — no auto-popup.
+  // Uses walkthroughComplete flag from session (persisted in Google Sheets)
+  // so cross-browser resume correctly skips the walkthrough.
   useEffect(() => {
     if (page === 'swipe' && !tutorialShownRef.current) {
       tutorialShownRef.current = true;
-      const isFirstLaunch = !localStorage.getItem(SPREADSHEET_KEY);
-      if (isFirstLaunch) {
-        // New user: skip TutorialModal, go straight to interactive walkthrough
+      // Check session for walkthroughComplete; fall back to spreadsheet presence for existing users
+      const stored = localStorage.getItem(SESSION_DATA_KEY);
+      let walkthroughDone = !!localStorage.getItem(SPREADSHEET_KEY); // legacy fallback
+      if (stored) {
+        try {
+          const sess = decode<{ walkthroughComplete?: boolean }>(stored);
+          walkthroughDone = sess.walkthroughComplete ?? walkthroughDone;
+        } catch { /* corrupted — let other code handle it */ }
+      }
+      if (!walkthroughDone) {
         setWalkthroughActive(true);
         setWalkthroughPhase('overlay');
+        setIsWalkthroughRetake(false);
       }
     }
   }, [page]);
@@ -130,7 +140,16 @@ function AppRouter() {
             flavorText={JOURNEY[1]?.flavor ?? ''}
             stats={TUTORIAL_STATS}
             difficulty="easy"
-            onNext={() => setWalkthroughPhase('map')}
+            onNext={() => {
+              if (isWalkthroughRetake) {
+                // Retake: skip map, return to current chapter
+                setWalkthroughActive(false);
+                setWalkthroughPhase('overlay');
+                setIsWalkthroughRetake(false);
+              } else {
+                setWalkthroughPhase('map');
+              }
+            }}
             isLastChapter={false}
           />
         )}
@@ -151,6 +170,10 @@ function AppRouter() {
         )}
       </AnimatePresence>
 
+      {/* Marks walkthrough complete in session + saves to sheet once */}
+      <WalkthroughCompleteSaver active={walkthroughActive} />
+
+
       {page === 'results' && (
         <ResultsPage onReset={() => setPage('import')} />
       )}
@@ -162,11 +185,39 @@ function AppRouter() {
           setShowTutorial(false);
           setWalkthroughActive(true);
           setWalkthroughPhase('overlay');
+          setIsWalkthroughRetake(true);
         }}
         onSkip={() => setShowTutorial(false)}
       />
     </SessionProvider>
   )
+}
+
+import { saveProgressTab } from './services/googleSheets'
+
+/** Tiny inner component (inside SessionProvider) that marks walkthrough complete
+ *  when the walkthrough transitions from active → inactive for the first time. */
+function WalkthroughCompleteSaver({ active }: { active: boolean }) {
+  const { session, setWalkthroughComplete, getProgressSnapshot, spreadsheetId } = useSession();
+  const { user } = useAuth();
+  const markedRef = useRef(false);
+
+  useEffect(() => {
+    // Trigger when walkthrough just ended (map phase completed) and hasn't been marked yet
+    if (!active && session && !session.walkthroughComplete && !markedRef.current) {
+      markedRef.current = true;
+      setWalkthroughComplete();
+      // Save to sheet (fire-and-forget)
+      if (user && spreadsheetId) {
+        setTimeout(() => {
+          const snap = getProgressSnapshot();
+          if (snap) saveProgressTab(user.accessToken, spreadsheetId, snap).catch(() => {});
+        }, 0);
+      }
+    }
+  }, [active, session, setWalkthroughComplete, getProgressSnapshot, user, spreadsheetId]);
+
+  return null;
 }
 
 export default function App() {
