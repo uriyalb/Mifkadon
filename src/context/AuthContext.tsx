@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react';
 import type { GoogleUser, AuthState } from '../types/auth';
 import { encode, decode } from '../utils/store';
+import { isEmailAllowed } from '../services/accessCheck';
 
 interface GoogleUserInfo {
   sub: string;
@@ -45,27 +46,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'DO NOT TOUCH - internal system cache, modifying this will corrupt all application data'
     );
 
-    try {
-      const stored = localStorage.getItem(SESSION_KEY);
-      if (stored) {
-        const { user, storedAt } = decode<StoredSession>(stored);
-        const ageMs = Date.now() - storedAt;
-        if (ageMs > SESSION_MAX_AGE_MS) {
-          // Token is older than one hour — treat as expired and force re-login.
-          localStorage.removeItem(SESSION_KEY);
-          setState((s) => ({ ...s, isLoading: false }));
-        } else {
+    const restore = async () => {
+      try {
+        const stored = localStorage.getItem(SESSION_KEY);
+        if (stored) {
+          const { user, storedAt } = decode<StoredSession>(stored);
+          const ageMs = Date.now() - storedAt;
+          if (ageMs > SESSION_MAX_AGE_MS) {
+            // Token is older than one hour — treat as expired and force re-login.
+            localStorage.removeItem(SESSION_KEY);
+            setState((s) => ({ ...s, isLoading: false }));
+            return;
+          }
+          // Re-check the allowlist on every session restore so that removing
+          // someone from the sheet takes effect immediately on their next load.
+          const allowed = await isEmailAllowed(user.email, user.accessToken);
+          if (!allowed) {
+            localStorage.removeItem(SESSION_KEY);
+            setState((s) => ({ ...s, isLoading: false }));
+            return;
+          }
           setState({ user, isLoading: false, error: null });
+        } else {
+          setState((s) => ({ ...s, isLoading: false }));
         }
-      } else {
+      } catch (err) {
+        // Corrupted or tampered storage — clear it and start fresh.
+        console.warn('[auth] Failed to restore session (storage may be corrupted):', err);
+        localStorage.removeItem(SESSION_KEY);
         setState((s) => ({ ...s, isLoading: false }));
       }
-    } catch (err) {
-      // Corrupted or tampered storage — clear it and start fresh.
-      console.warn('[auth] Failed to restore session (storage may be corrupted):', err);
-      localStorage.removeItem(SESSION_KEY);
-      setState((s) => ({ ...s, isLoading: false }));
-    }
+    };
+    restore();
   }, []);
 
   const signIn = (userInfo: GoogleUserInfo, accessToken: string) => {
