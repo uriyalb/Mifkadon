@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const DEBUG = import.meta.env.VITE_DEBUG_CONFETTI === 'true';
+
 const COLORS = ['#FFD700', '#E53935', '#EF5350', '#22C55E', '#EAB308', '#84CC16'];
 const PARTICLE_COUNT = 40;
 
@@ -20,7 +22,7 @@ interface Particle {
 function createParticles(): Particle[] {
   const startX = window.innerWidth * 0.5;
   const startY = window.innerHeight * 0.4;
-  return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+  const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
     const angle = (Math.random() * Math.PI * 2);
     const velocity = 80 + Math.random() * 200;
     return {
@@ -36,6 +38,24 @@ function createParticles(): Particle[] {
       duration: 1.8 + Math.random() * 1.2,
     };
   });
+
+  if (DEBUG) {
+    console.log('[PixelConfetti] createParticles', {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      origin: { x: startX, y: startY },
+      count: particles.length,
+      sample: particles.slice(0, 3).map((p) => ({
+        id: p.id,
+        start: { x: p.x, y: p.y },
+        target: { x: p.x + p.targetX, y: p.y + p.targetY },
+        size: p.size,
+        color: p.color,
+        duration: p.duration,
+      })),
+    });
+  }
+
+  return particles;
 }
 
 export default function PixelConfetti() {
@@ -43,9 +63,17 @@ export default function PixelConfetti() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 3500);
+    if (DEBUG) console.log('[PixelConfetti] mounted, visible=true');
+    const t = setTimeout(() => {
+      if (DEBUG) console.log('[PixelConfetti] auto-dismiss after 3.5s');
+      setVisible(false);
+    }, 3500);
     return () => clearTimeout(t);
   }, []);
+
+  if (DEBUG) {
+    console.log('[PixelConfetti] render, visible:', visible, 'particles:', particles.length);
+  }
 
   return (
     <AnimatePresence>
