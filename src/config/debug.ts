@@ -1,2 +1,3 @@
-// Debug flags — set VITE_DEBUG_CONFETTI=true in .env.local to enable
-export const DEBUG_CONFETTI = import.meta.env.VITE_DEBUG_CONFETTI === 'true';
+// Debug flags — flip to true to enable debug logging in the browser console.
+// No rebuild needed if you change this before deploying; just redeploy.
+export const DEBUG_CONFETTI = false;

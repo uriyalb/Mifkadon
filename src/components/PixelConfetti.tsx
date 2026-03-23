@@ -9,8 +9,8 @@ interface Particle {
   id: number;
   x: number;
   y: number;
-  targetX: number;
-  targetY: number;
+  dx: number;
+  dy: number;
   size: number;
   color: string;
   rotate: number;
@@ -19,17 +19,18 @@ interface Particle {
 }
 
 function createParticles(): Particle[] {
-  const startX = window.innerWidth * 0.5;
-  const startY = window.innerHeight * 0.4;
-  const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-    const angle = (Math.random() * Math.PI * 2);
+  const x = window.innerWidth * 0.5;
+  const y = window.innerHeight * 0.4;
+
+  return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2;
     const velocity = 80 + Math.random() * 200;
     return {
       id: i,
-      x: startX,
-      y: startY,
-      targetX: Math.cos(angle) * velocity,
-      targetY: Math.sin(angle) * velocity + 300 + Math.random() * 200,
+      x,
+      y,
+      dx: Math.cos(angle) * velocity,
+      dy: Math.sin(angle) * velocity + 300 + Math.random() * 200,
       size: 4 + Math.floor(Math.random() * 5),
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       rotate: Math.random() * 720 - 360,
@@ -37,24 +38,6 @@ function createParticles(): Particle[] {
       duration: 1.8 + Math.random() * 1.2,
     };
   });
-
-  if (DEBUG) {
-    console.log('[PixelConfetti] createParticles', {
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-      origin: { x: startX, y: startY },
-      count: particles.length,
-      sample: particles.slice(0, 3).map((p) => ({
-        id: p.id,
-        start: { x: p.x, y: p.y },
-        target: { x: p.x + p.targetX, y: p.y + p.targetY },
-        size: p.size,
-        color: p.color,
-        duration: p.duration,
-      })),
-    });
-  }
-
-  return particles;
 }
 
 export default function PixelConfetti() {
@@ -62,38 +45,37 @@ export default function PixelConfetti() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    if (DEBUG) console.log('[PixelConfetti] mounted, visible=true');
-    const t = setTimeout(() => {
-      if (DEBUG) console.log('[PixelConfetti] auto-dismiss after 3.5s');
-      setVisible(false);
-    }, 3500);
+    console.log('[PixelConfetti] mounted, particles:', particles.length);
+    if (DEBUG) {
+      console.log('[PixelConfetti] sample:', particles.slice(0, 3));
+    }
+    const t = setTimeout(() => setVisible(false), 3500);
     return () => clearTimeout(t);
   }, []);
-
-  if (DEBUG) {
-    console.log('[PixelConfetti] render, visible:', visible, 'particles:', particles.length);
-  }
 
   return (
     <AnimatePresence>
       {visible && (
         <div
-          className="fixed inset-0 z-[60] pointer-events-none overflow-hidden"
-          style={{ imageRendering: 'pixelated' }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 60,
+            pointerEvents: 'none',
+            overflow: 'hidden',
+            imageRendering: 'pixelated',
+          }}
         >
           {particles.map((p) => (
             <motion.div
               key={p.id}
-              initial={{
-                x: p.x,
-                y: p.y,
-                opacity: 1,
-                rotate: 0,
-                scale: 1,
-              }}
+              initial={{ x: p.x, y: p.y, opacity: 1, rotate: 0, scale: 1 }}
               animate={{
-                x: p.x + p.targetX,
-                y: p.y + p.targetY,
+                x: p.x + p.dx,
+                y: p.y + p.dy,
                 opacity: 0,
                 rotate: p.rotate,
                 scale: 0.5,
@@ -105,6 +87,8 @@ export default function PixelConfetti() {
               }}
               style={{
                 position: 'absolute',
+                top: 0,
+                left: 0,
                 width: p.size,
                 height: p.size,
                 backgroundColor: p.color,
