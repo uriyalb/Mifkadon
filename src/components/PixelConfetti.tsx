@@ -18,13 +18,15 @@ interface Particle {
 }
 
 function createParticles(): Particle[] {
+  const startX = window.innerWidth * 0.5;
+  const startY = window.innerHeight * 0.4;
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
     const angle = (Math.random() * Math.PI * 2);
     const velocity = 80 + Math.random() * 200;
     return {
       id: i,
-      x: 0,
-      y: 0,
+      x: startX,
+      y: startY,
       targetX: Math.cos(angle) * velocity,
       targetY: Math.sin(angle) * velocity + 300 + Math.random() * 200,
       size: 4 + Math.floor(Math.random() * 5),
@@ -56,15 +58,15 @@ export default function PixelConfetti() {
             <motion.div
               key={p.id}
               initial={{
-                x: '50vw',
-                y: '40vh',
+                x: p.x,
+                y: p.y,
                 opacity: 1,
                 rotate: 0,
                 scale: 1,
               }}
               animate={{
-                x: `calc(50vw + ${p.targetX}px)`,
-                y: `calc(40vh + ${p.targetY}px)`,
+                x: p.x + p.targetX,
+                y: p.y + p.targetY,
                 opacity: 0,
                 rotate: p.rotate,
                 scale: 0.5,
