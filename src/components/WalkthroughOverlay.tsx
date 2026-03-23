@@ -1,24 +1,26 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMotionValue, useMotionValueEvent, AnimatePresence, motion } from 'framer-motion';
 import type { Priority } from '../types/contact';
-import { WALKTHROUGH_CARDS, WALKTHROUGH_COMPLETE, WALKTHROUGH_FEEDBACK } from '../config/tutorialConfig';
+import { WALKTHROUGH_CARDS, WALKTHROUGH_FEEDBACK } from '../config/tutorialConfig';
 import CardStack from './CardStack';
 import PriorityZones from './PriorityZones';
 import PixelFinger from './PixelFinger';
-import PixelConfetti from './PixelConfetti';
+import TravelScene from './TravelScene';
+import Header from './Header';
+import { JOURNEY } from '../data/journeyRoute';
+import { PRIORITY_LABELS } from '../config/labels';
+import { SWIPE_TEXT } from '../config/textSwipe';
 
 interface Props {
   onComplete: () => void;
 }
 
-type Phase = 'playing' | 'complete';
-
 export default function WalkthroughOverlay({ onComplete }: Props) {
   const [cardIndex, setCardIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>('playing');
   const [shakeKey, setShakeKey] = useState(0);
   const [showFinger, setShowFinger] = useState(false);
   const [wrongToast, setWrongToast] = useState(false);
+  const [showPriorityPicker, setShowPriorityPicker] = useState(false);
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -26,9 +28,15 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
   const cardAreaRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrongToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pickerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentCard = cardIndex < WALKTHROUGH_CARDS.length ? WALKTHROUGH_CARDS[cardIndex] : null;
   const remaining = WALKTHROUGH_CARDS.slice(cardIndex).map((c) => c.contact);
+
+  // Progress as percentage for TravelScene
+  const scenePct = Math.round((cardIndex / WALKTHROUGH_CARDS.length) * 100);
+  const fromCity = JOURNEY[0]?.name ?? 'תחילת המסע';
+  const toCity = JOURNEY[1]?.name ?? 'יעד ראשון';
 
   // Capture touch start Y for PriorityZones positioning
   useEffect(() => {
@@ -47,21 +55,18 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
   const startIdleTimer = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
-      if (phase === 'playing') {
-        setShowFinger(true);
-      }
+      setShowFinger(true);
     }, WALKTHROUGH_FEEDBACK.fingerIdleDelay);
-  }, [phase]);
+  }, []);
 
   // Show finger on first card mount and when cardIndex changes
   useEffect(() => {
-    if (phase !== 'playing') return;
     setShowFinger(false);
     const t = setTimeout(() => {
       setShowFinger(true);
     }, 1000);
     return () => clearTimeout(t);
-  }, [cardIndex, shakeKey, phase]);
+  }, [cardIndex, shakeKey]);
 
   // Hide finger when user starts dragging
   useMotionValueEvent(dragX, 'change', (x) => {
@@ -76,54 +81,79 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (wrongToastTimer.current) clearTimeout(wrongToastTimer.current);
+      if (pickerTimerRef.current) clearTimeout(pickerTimerRef.current);
     };
   }, []);
 
-  const isCorrectAction = useCallback((direction: 'right' | 'left', priority?: Priority): boolean => {
-    if (!currentCard) return false;
-    const { correctAction } = currentCard;
-    if (correctAction.type === 'skip') return direction === 'left';
-    if (correctAction.type === 'keep') {
-      return direction === 'right' && priority === correctAction.priority;
+  const showWrongFeedback = useCallback(() => {
+    setWrongToast(true);
+    if (wrongToastTimer.current) clearTimeout(wrongToastTimer.current);
+    wrongToastTimer.current = setTimeout(() => setWrongToast(false), 1500);
+    setShakeKey((k) => k + 1);
+  }, []);
+
+  const advanceCard = useCallback(() => {
+    if (cardIndex + 1 >= WALKTHROUGH_CARDS.length) {
+      onComplete();
+    } else {
+      setCardIndex((i) => i + 1);
     }
-    return false;
-  }, [currentCard]);
+  }, [cardIndex, onComplete]);
 
   const handleSwipeRight = useCallback((_contact: unknown, priority: Priority) => {
     if (!currentCard) return;
-    if (isCorrectAction('right', priority)) {
-      // Correct! Advance to next card
-      if (cardIndex + 1 >= WALKTHROUGH_CARDS.length) {
-        setPhase('complete');
-      } else {
-        setCardIndex((i) => i + 1);
-      }
+    const { correctAction } = currentCard;
+    if (correctAction.type === 'keep' && priority === correctAction.priority) {
+      advanceCard();
     } else {
-      // Wrong priority — shake and replay finger
-      setWrongToast(true);
-      if (wrongToastTimer.current) clearTimeout(wrongToastTimer.current);
-      wrongToastTimer.current = setTimeout(() => setWrongToast(false), 1500);
-      setShakeKey((k) => k + 1);
+      showWrongFeedback();
     }
-  }, [currentCard, cardIndex, isCorrectAction]);
+  }, [currentCard, advanceCard, showWrongFeedback]);
 
   const handleSwipeLeft = useCallback((_contact: unknown) => {
     if (!currentCard) return;
-    if (isCorrectAction('left')) {
-      // Correct!
-      if (cardIndex + 1 >= WALKTHROUGH_CARDS.length) {
-        setPhase('complete');
-      } else {
-        setCardIndex((i) => i + 1);
-      }
+    if (currentCard.correctAction.type === 'skip') {
+      advanceCard();
     } else {
-      // Wrong — shake and replay finger
-      setWrongToast(true);
-      if (wrongToastTimer.current) clearTimeout(wrongToastTimer.current);
-      wrongToastTimer.current = setTimeout(() => setWrongToast(false), 1500);
-      setShakeKey((k) => k + 1);
+      showWrongFeedback();
     }
-  }, [currentCard, cardIndex, isCorrectAction]);
+  }, [currentCard, advanceCard, showWrongFeedback]);
+
+  const handleSwipeUp = useCallback((_contact: unknown) => {
+    if (!currentCard) return;
+    if (currentCard.correctAction.type === 'registered') {
+      advanceCard();
+    } else {
+      showWrongFeedback();
+    }
+  }, [currentCard, advanceCard, showWrongFeedback]);
+
+  // Button-triggered keep with priority picker
+  const openPriorityPicker = useCallback(() => {
+    if (!currentCard) return;
+    setShowPriorityPicker(true);
+    if (pickerTimerRef.current) clearTimeout(pickerTimerRef.current);
+    pickerTimerRef.current = setTimeout(() => {
+      setShowPriorityPicker(false);
+    }, 5000);
+  }, [currentCard]);
+
+  const pickPriority = useCallback((priority: Priority) => {
+    if (pickerTimerRef.current) clearTimeout(pickerTimerRef.current);
+    setShowPriorityPicker(false);
+    handleSwipeRight(null, priority);
+  }, [handleSwipeRight]);
+
+  const dismissPicker = useCallback(() => {
+    if (pickerTimerRef.current) clearTimeout(pickerTimerRef.current);
+    setShowPriorityPicker(false);
+  }, []);
+
+  // Button-triggered skip
+  const handleSkipButton = useCallback(() => {
+    dismissPicker();
+    if (remaining.length > 0) handleSwipeLeft(remaining[0]);
+  }, [remaining, handleSwipeLeft, dismissPicker]);
 
   // Compute finger target positions based on card center
   const getFingerPositions = useCallback(() => {
@@ -138,6 +168,9 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
     if (correctAction.type === 'skip') {
       return { startX: cx, startY: cy, endX: cx - 180, endY: cy };
     }
+    if (correctAction.type === 'registered') {
+      return { startX: cx, startY: cy, endX: cx, endY: cy - 200 };
+    }
     // keep with priority
     const endX = cx + 180;
     const endY = correctAction.priority === 'high' ? cy - 100
@@ -148,53 +181,41 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
 
   const fingerPos = getFingerPositions();
 
-  if (phase === 'complete') {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="h-[100dvh] overflow-hidden flex flex-col items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}
-      >
-        <PixelConfetti />
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
-          className="text-center"
-        >
-          <h1 className="text-4xl font-black text-white mb-2">{WALKTHROUGH_COMPLETE.title}</h1>
-          <p className="text-lg text-white/80 mb-8">{WALKTHROUGH_COMPLETE.subtitle}</p>
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.5 }}
-            onClick={onComplete}
-            className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-lg active:scale-95 transition-transform"
-            style={{ background: 'linear-gradient(135deg, #22C55E, #4ADE80)' }}
-          >
-            {WALKTHROUGH_COMPLETE.continueLabel}
-          </motion.button>
-        </motion.div>
-      </motion.div>
-    );
-  }
+  const canAct = remaining.length > 0;
 
   return (
     <div
       className="h-[100dvh] overflow-hidden flex flex-col"
-      style={{ background: 'linear-gradient(135deg, #FF2D78 0%, #FF6BA8 40%, #FFB3D1 70%, #FFF0F6 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #E53935 0%, #EF5350 40%, #FFCDD2 70%, #FFF5F5 100%)' }}
     >
-      {/* Progress indicator */}
-      <div className="shrink-0 px-4 pt-4 pb-2">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-white/60 text-xs font-bold">הדרכה</span>
-          <div className="flex gap-1.5">
+      <Header />
+
+      {/* Travel scene — mirrors SwipePage exactly */}
+      <div className="shrink-0 px-2">
+        <TravelScene
+          fromCity={fromCity}
+          toCity={toCity}
+          pct={scenePct}
+          current={cardIndex}
+          total={WALKTHROUGH_CARDS.length}
+          difficulty="easy"
+          chapterIndex={0}
+        />
+
+        {/* Progress indicator row */}
+        <div className="flex items-center justify-center gap-3 mt-1 text-[10px] text-white/60 tabular-nums relative" dir="rtl">
+          <span className="text-white/70 font-bold">הדרכה</span>
+          <span className="text-white/30">|</span>
+          <div className="flex gap-1.5 items-center">
             {WALKTHROUGH_CARDS.map((_, i) => (
               <div
                 key={i}
-                className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                  i < cardIndex ? 'bg-white' : i === cardIndex ? 'bg-white/80 ring-2 ring-white/40' : 'bg-white/25'
+                className={`rounded-full transition-all duration-300 ${
+                  i < cardIndex
+                    ? 'w-2 h-2 bg-white'
+                    : i === cardIndex
+                    ? 'w-2.5 h-2.5 bg-white ring-2 ring-white/40'
+                    : 'w-2 h-2 bg-white/25'
                 }`}
               />
             ))}
@@ -210,7 +231,7 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="shrink-0 px-4 pb-2"
+            className="shrink-0 px-4 pb-2 pt-1"
           >
             <div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2 text-center" dir="rtl">
               <span className="text-white text-sm font-bold">{currentCard.hint}</span>
@@ -225,9 +246,7 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
           key={shakeKey}
           ref={cardAreaRef}
           className="relative w-[340px] max-w-[90vw]"
-          animate={shakeKey > 0 ? {
-            x: [0, -10, 10, -10, 10, 0],
-          } : {}}
+          animate={shakeKey > 0 ? { x: [0, -10, 10, -10, 10, 0] } : {}}
           transition={{ duration: 0.4 }}
         >
           <AnimatePresence>
@@ -239,7 +258,7 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
                 dragY={dragY}
                 onSwipeRight={handleSwipeRight}
                 onSwipeLeft={handleSwipeLeft}
-                onSwipeUp={() => {}}
+                onSwipeUp={handleSwipeUp}
               />
             )}
           </AnimatePresence>
@@ -255,7 +274,7 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
         startY={fingerPos.startY}
         endX={fingerPos.endX}
         endY={fingerPos.endY}
-        visible={showFinger && phase === 'playing'}
+        visible={showFinger}
         onAnimationComplete={() => {}}
       />
 
@@ -273,6 +292,82 @@ export default function WalkthroughOverlay({ onComplete }: Props) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Action buttons — identical to SwipePage */}
+      <div className="shrink-0 px-4 pb-2 flex flex-col items-center gap-3">
+        <div className="relative w-full max-w-[340px]" style={{ zIndex: 55 }}>
+          {/* Priority picker */}
+          <AnimatePresence>
+            {showPriorityPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-0 right-0 mb-2 flex flex-col gap-1.5"
+                style={{ zIndex: 55 }}
+                dir="ltr"
+              >
+                <div className="flex items-center gap-2 justify-center">
+                  {(['high', 'medium', 'low'] as Priority[]).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => pickPriority(p)}
+                      className="flex-1 h-12 rounded-xl text-white font-bold shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center"
+                      style={{ background: PRIORITY_LABELS[p].bg }}
+                    >
+                      <span className="text-sm leading-tight">{PRIORITY_LABELS[p].zoneName}</span>
+                      <span className="text-[10px] opacity-75 leading-tight">{PRIORITY_LABELS[p].text}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Countdown bar */}
+                <motion.div
+                  className="h-0.5 mx-4 rounded-full bg-white/50"
+                  initial={{ scaleX: 1 }}
+                  animate={{ scaleX: 0 }}
+                  transition={{ duration: 5, ease: 'linear' }}
+                  style={{ transformOrigin: 'right' }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-center gap-3" dir="ltr">
+            {/* Skip */}
+            <button
+              onClick={handleSkipButton}
+              disabled={!canAct}
+              className="flex-1 h-14 rounded-2xl bg-red-500/30 border-2 border-red-400 text-red-100 font-bold text-lg flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-red-500/50 active:enabled:scale-95"
+            >
+              <span className="text-xl leading-none">✕</span>
+              <span>{SWIPE_TEXT.buttons.skip}</span>
+            </button>
+
+            {/* Undo — disabled in walkthrough (no real state to undo) */}
+            <button
+              disabled
+              className="flex-none w-16 h-14 rounded-2xl glass border border-red-200 flex items-center justify-center text-[#E53935] text-sm font-bold opacity-30 cursor-not-allowed"
+              title={SWIPE_TEXT.buttons.undoTitle}
+            >
+              {SWIPE_TEXT.buttons.undo}
+            </button>
+
+            {/* Keep */}
+            <button
+              onClick={() => { dismissPicker(); openPriorityPicker(); }}
+              disabled={!canAct}
+              className="flex-1 h-14 rounded-2xl gradient-pink text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:opacity-90 active:enabled:scale-95"
+            >
+              <span>{SWIPE_TEXT.buttons.keep}</span>
+              <span className="text-xl leading-none">✓</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Spacer for safe area */}
+        <div className="pb-safe-bottom pb-2" />
+      </div>
     </div>
   );
 }
