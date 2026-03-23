@@ -18,12 +18,18 @@ interface Particle {
 }
 
 function createParticles(): Particle[] {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
     const fromLeft = i % 2 === 0;
     const startVw = fromLeft
       ? 10 + Math.random() * 15   // 10-25vw
       : 75 + Math.random() * 15;  // 75-90vw
     const startVh = 5 + Math.random() * 10; // 5-15vh
+
+    // Convert to pixels for consistent Framer Motion interpolation
+    const startX = (startVw / 100) * vw;
+    const startY = (startVh / 100) * vh;
 
     // Drift toward center + fall down
     const driftX = fromLeft
@@ -33,8 +39,8 @@ function createParticles(): Particle[] {
 
     return {
       id: i,
-      startVw,
-      startVh,
+      startVw: startX,
+      startVh: startY,
       targetX: driftX + (Math.random() - 0.5) * 40,
       targetY: fallY,
       size: 5 + Math.floor(Math.random() * 7),
@@ -71,15 +77,15 @@ export default function SwipeConfetti({ trigger }: Props) {
             <motion.div
               key={`${burst.key}-${p.id}`}
               initial={{
-                x: `${p.startVw}vw`,
-                y: `${p.startVh}vh`,
+                x: p.startVw,
+                y: p.startVh,
                 opacity: 1,
                 rotate: 0,
                 scale: 1,
               }}
               animate={{
-                x: `calc(${p.startVw}vw + ${p.targetX}px)`,
-                y: `calc(${p.startVh}vh + ${p.targetY}px)`,
+                x: p.startVw + p.targetX,
+                y: p.startVh + p.targetY,
                 opacity: 0,
                 rotate: p.rotate,
                 scale: 0.5,
