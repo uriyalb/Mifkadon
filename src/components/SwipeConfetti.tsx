@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DEBUG_CONFETTI as DEBUG } from '../config/debug';
 
 const COLORS = ['#2196F3', '#64B5F6', '#FFD700', '#E53935', '#22C55E', '#42A5F5', '#BBDEFB', '#FFF176'];
 const PARTICLE_COUNT = 100;
@@ -20,7 +21,7 @@ interface Particle {
 function createParticles(): Particle[] {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+  const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
     const fromLeft = i % 2 === 0;
     const startVw = fromLeft
       ? 10 + Math.random() * 15   // 10-25vw
@@ -50,6 +51,24 @@ function createParticles(): Particle[] {
       duration: 1.8 + Math.random() * 1.2,
     };
   });
+
+  if (DEBUG) {
+    console.log('[SwipeConfetti] createParticles', {
+      viewport: { width: vw, height: vh },
+      count: particles.length,
+      sample: particles.slice(0, 3).map((p) => ({
+        id: p.id,
+        start: { x: p.startVw, y: p.startVh },
+        target: { x: p.startVw + p.targetX, y: p.startVh + p.targetY },
+        size: p.size,
+        color: p.color,
+        duration: p.duration,
+        delay: p.delay,
+      })),
+    });
+  }
+
+  return particles;
 }
 
 interface Props {
@@ -61,13 +80,19 @@ export default function SwipeConfetti({ trigger }: Props) {
 
   useEffect(() => {
     if (trigger === 0) return;
+    if (DEBUG) console.log('[SwipeConfetti] trigger fired:', trigger);
     const burst = { key: trigger, particles: createParticles() };
     setBursts((prev) => [...prev, burst]);
     const t = setTimeout(() => {
+      if (DEBUG) console.log('[SwipeConfetti] burst cleanup:', burst.key);
       setBursts((prev) => prev.filter((b) => b.key !== burst.key));
     }, 4500);
     return () => clearTimeout(t);
   }, [trigger]);
+
+  if (DEBUG && bursts.length > 0) {
+    console.log('[SwipeConfetti] rendering', bursts.length, 'burst(s),', bursts.reduce((n, b) => n + b.particles.length, 0), 'particles total');
+  }
 
   return (
     <div className="fixed inset-0 z-[70] pointer-events-none overflow-hidden" style={{ imageRendering: 'pixelated' }}>
