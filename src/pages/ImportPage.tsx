@@ -17,9 +17,16 @@ import {
   protectProgressColumns,
   findExistingTrackingSheet,
   createTrackingSheet,
+  loadProgressTab,
+  saveProgressTab,
+  ensureProgressTab,
 } from '../services/googleSheets';
+import type { ProgressTabData } from '../types/contact';
 import Header from '../components/Header';
 import { IMPORT_TEXT } from '../config/textImport';
+import { JOURNEY } from '../data/journeyRoute';
+import { CHAPTERS } from '../config/chapters';
+import { DIFFICULTY_LABELS } from '../config/labels';
 
 interface Props {
   onStart: () => void;
@@ -58,7 +65,7 @@ const SOURCE_COLOR: Record<SourceKey, string> = {
 
 export default function ImportPage({ onStart }: Props) {
   const { user } = useAuth();
-  const { initSession, restoreSession, setSpreadsheetId, setTrackingSheetId, resetSession } = useSession();
+  const { initSession, restoreSession, setSpreadsheetId, setTrackingSheetId, getProgressSnapshot, resetSession } = useSession();
 
   const [sources, setSources] = useState<Record<SourceKey, SourceState>>({
     google:    { status: 'idle', count: 0 },
@@ -77,7 +84,10 @@ export default function ImportPage({ onStart }: Props) {
   const [isStarting, setIsStarting] = useState(false);
   const [manualForm, setManualForm] = useState<ManualContact>({ name: '', phone: '', email: '' });
   const [showManual, setShowManual] = useState(false);
-  const [resumeInfo, setResumeInfo] = useState<{ spreadsheetId: string; pending: number; processed: number; total: number } | null>(null);
+  const [resumeInfo, setResumeInfo] = useState<{
+    spreadsheetId: string; pending: number; processed: number; total: number;
+    progressTab: ProgressTabData | null;
+  } | null>(null);
   const [checkingResume, setCheckingResume] = useState(true);
   // Whether the user chose to add new contacts instead of resuming
   const [showNewImport, setShowNewImport] = useState(false);
@@ -92,13 +102,17 @@ export default function ImportPage({ onStart }: Props) {
     findExistingSpreadsheet(user.accessToken, user.email)
       .then(async (id) => {
         if (id) {
-          const data = await loadAllContactsWithStatus(user.accessToken, id);
+          const [data, progressTab] = await Promise.all([
+            loadAllContactsWithStatus(user.accessToken, id),
+            loadProgressTab(user.accessToken, id),
+          ]);
           if (data.pending.length > 0) {
             setResumeInfo({
               spreadsheetId: id,
               pending: data.pending.length,
               processed: data.selected.length + data.dismissedIds.length,
               total: data.allContacts.length,
+              progressTab,
             });
           }
         }
@@ -222,7 +236,16 @@ export default function ImportPage({ onStart }: Props) {
     try {
       const data = await loadAllContactsWithStatus(user.accessToken, resumeInfo.spreadsheetId);
       setSpreadsheetId(resumeInfo.spreadsheetId);
-      restoreSession(data);
+      restoreSession(data, resumeInfo.progressTab);
+
+      // Ensure progress tab exists (migration for existing users) and save current state
+      ensureProgressTab(user.accessToken, resumeInfo.spreadsheetId)
+        .then(() => {
+          const snap = getProgressSnapshot();
+          if (snap) saveProgressTab(user.accessToken, resumeInfo.spreadsheetId, snap);
+        })
+        .catch(() => {});
+
       ensureTrackingSheet();
       onStart();
     } catch {
@@ -259,12 +282,22 @@ export default function ImportPage({ onStart }: Props) {
         }
         await protectProgressColumns(user.accessToken, existingId);
         // Reload full contact list so session includes existing + new.
-        // Use restoreSession to preserve chapter progress — completed chapters
-        // keep their sizes, new contacts redistribute across remaining chapters.
-        const sheetData = await loadAllContactsWithStatus(user.accessToken, existingId);
+        // Load progress from sheet to preserve immutable chapter sizes.
+        const [sheetData, progressTab] = await Promise.all([
+          loadAllContactsWithStatus(user.accessToken, existingId),
+          loadProgressTab(user.accessToken, existingId),
+        ]);
         setAllContacts(sheetData.pending);
         setSpreadsheetId(existingId);
-        restoreSession(sheetData);
+        // Contacts changed — restoreSession will redistribute chapter sizes
+        restoreSession(sheetData, progressTab);
+        // Save the recalculated sizes back to the sheet
+        ensureProgressTab(user.accessToken, existingId)
+          .then(() => {
+            const snap = getProgressSnapshot();
+            if (snap) saveProgressTab(user.accessToken, existingId, snap);
+          })
+          .catch(() => {});
         setSavedCount(sheetData.allContacts.length);
       } else {
         const sheetId = await createSpreadsheet(user.accessToken, user.email);
@@ -393,6 +426,64 @@ export default function ImportPage({ onStart }: Props) {
                 />
               </div>
             </div>
+
+            {/* Chapter journey detail */}
+            {resumeInfo.progressTab && (() => {
+              const pt = resumeInfo.progressTab;
+              const ch = pt.currentChapter;
+              const totalChapters = pt.chapterSizes.length;
+              const cityName = JOURNEY[ch + 1]?.name ?? JOURNEY[JOURNEY.length - 1].name;
+              const diff = CHAPTERS[ch]?.difficulty ?? 'easy';
+              const diffLabel = DIFFICULTY_LABELS[diff];
+              return (
+                <div className="mb-4">
+                  {/* Chapter indicator + difficulty */}
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <span className="text-white font-bold text-sm">
+                      {IMPORT_TEXT.chapterInfo.label(ch + 1, totalChapters)}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full text-white font-bold" style={{ background: diffLabel.bg }}>
+                      {IMPORT_TEXT.chapterInfo.difficulty[diff]}
+                    </span>
+                    <span className="text-white/70 text-xs">
+                      — {cityName}
+                    </span>
+                  </div>
+                  {/* Segmented chapter bar */}
+                  <div className="flex gap-1 h-2">
+                    {pt.chapterSizes.map((size, i) => {
+                      const chStart = pt.chapterSizes.slice(0, i).reduce((a, b) => a + b, 0);
+                      const chEnd = chStart + size;
+                      const processed = resumeInfo.processed;
+                      let fillPct = 0;
+                      if (processed >= chEnd) fillPct = 100;
+                      else if (processed > chStart) fillPct = Math.round(((processed - chStart) / size) * 100);
+                      const isCurrent = i === ch;
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-full overflow-hidden"
+                          style={{
+                            background: 'rgba(255,255,255,0.15)',
+                            border: isCurrent ? '1px solid rgba(255,215,0,0.6)' : 'none',
+                          }}
+                        >
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${fillPct}%`,
+                              background: fillPct === 100
+                                ? 'linear-gradient(90deg, #22C55E, #4ADE80)'
+                                : 'linear-gradient(90deg, #FFD700, #FF6B35)',
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Stats pills */}
             <div className="flex justify-center gap-3 mb-5">

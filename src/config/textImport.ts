@@ -97,4 +97,9 @@ export const IMPORT_TEXT = {
   },
   imported: 'יובא',
   emptyState: 'ייבא לפחות מקור אחד כדי להתחיל',
+  chapterInfo: {
+    label: (current: number, total: number) => `פרק ${current} מתוך ${total}`,
+    destination: 'יעד',
+    difficulty: { easy: 'קל', medium: 'בינוני', hard: 'קשה' },
+  },
 } as const;

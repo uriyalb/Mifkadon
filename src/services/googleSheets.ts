@@ -1,5 +1,6 @@
-import type { Contact, SelectedContact, Priority, ContactTrackingData } from '../types/contact';
+import type { Contact, SelectedContact, Priority, ContactTrackingData, ProgressTabData } from '../types/contact';
 import { SYNC_CONFIG } from '../config/sync';
+import { encode, decode } from '../utils/store';
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
@@ -22,8 +23,11 @@ const LABEL_TO_PRIORITY: Record<string, Priority> = {
 // Tab names (URL-encoded for API calls)
 const TAB1 = 'כל אנשי הקשר';
 const TAB2 = 'אושרו לקמפיין';
+const TAB3 = 'נתונים';
 const TAB1_ENC = encodeURIComponent(TAB1);
 const TAB2_ENC = encodeURIComponent(TAB2);
+const TAB3_ENC = encodeURIComponent(TAB3);
+const PROGRESS_TAB_SHEET_ID = 2;
 
 // ─── Find existing spreadsheet by title ─────────────────────────────────────
 export async function findExistingSpreadsheet(
@@ -56,6 +60,7 @@ export async function createSpreadsheet(
       sheets: [
         { properties: { sheetId: 0, title: TAB1, index: 0 } },
         { properties: { sheetId: 1, title: TAB2, index: 1 } },
+        { properties: { sheetId: PROGRESS_TAB_SHEET_ID, title: TAB3, index: 2, hidden: true } },
       ],
     }),
   });
@@ -483,6 +488,76 @@ export async function checkSheetsAccess(accessToken: string): Promise<boolean> {
     return resp.ok;
   } catch {
     return false;
+  }
+}
+
+// ─── Progress tab (hidden, encoded) ──────────────────────────────────────────
+//
+// Stores chapter progress as a single encoded blob in a hidden sheet tab.
+// Data is base64-encoded with an FNV-1a integrity hash (same scheme as
+// localStorage) so it cannot be read or modified by the user in the Sheet UI.
+
+/** Ensure the hidden progress tab exists. Creates it if missing. */
+export async function ensureProgressTab(
+  accessToken: string,
+  spreadsheetId: string,
+): Promise<void> {
+  // Try a lightweight read first
+  const resp = await fetch(
+    `${SHEETS_API}/${spreadsheetId}/values/${TAB3_ENC}!A1`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (resp.ok) return; // Tab already exists
+
+  // Create the hidden tab
+  await fetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [{
+        addSheet: {
+          properties: { sheetId: PROGRESS_TAB_SHEET_ID, title: TAB3, index: 2, hidden: true },
+        },
+      }],
+    }),
+  });
+}
+
+/** Save progress data to the hidden tab (single encoded cell). */
+export async function saveProgressTab(
+  accessToken: string,
+  spreadsheetId: string,
+  data: ProgressTabData,
+): Promise<void> {
+  const blob = encode({ ...data, updatedAt: new Date().toISOString() });
+  await fetch(
+    `${SHEETS_API}/${spreadsheetId}/values/${TAB3_ENC}!A1?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [[blob]] }),
+    },
+  );
+}
+
+/** Load progress data from the hidden tab. Returns null if tab/data missing or tampered. */
+export async function loadProgressTab(
+  accessToken: string,
+  spreadsheetId: string,
+): Promise<ProgressTabData | null> {
+  try {
+    const resp = await fetch(
+      `${SHEETS_API}/${spreadsheetId}/values/${TAB3_ENC}!A1`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (!resp.ok) return null;
+    const json = await resp.json();
+    const cell = (json.values as string[][])?.[0]?.[0];
+    if (!cell) return null;
+    return decode<ProgressTabData>(cell);
+  } catch {
+    // Tampered / corrupted / missing — treat as no data
+    return null;
   }
 }
 
