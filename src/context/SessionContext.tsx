@@ -39,6 +39,7 @@ interface SessionContextType {
   setWalkthroughComplete: () => void;
   getProgressSnapshot: () => ProgressTabData | null;
   resetSession: () => void;
+  updateContactStatus: (contactId: string, status: string) => void;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -306,6 +307,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const updateContactStatus = (contactId: string, status: string) => {
+    if (!session) return;
+    const newSelected = session.selected.map((c) =>
+      c.id === contactId ? { ...c, status } : c,
+    );
+    persist({ ...session, selected: newSelected });
+  };
+
   const resetSession = () => {
     localStorage.removeItem(SESSION_DATA_KEY);
     localStorage.removeItem(SPREADSHEET_KEY);
@@ -341,6 +350,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setWalkthroughComplete,
         getProgressSnapshot,
         resetSession,
+        updateContactStatus,
       }}
     >
       {children}

@@ -45,7 +45,7 @@ const MAX_HISTORY = 10;
 
 export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
   const { user } = useAuth();
-  const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes, getProgressSnapshot } = useSession();
+  const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes, getProgressSnapshot, updateContactStatus } = useSession();
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -507,6 +507,7 @@ export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
             trackingData={dashboardTrackingData}
             chapterSizes={chapterSizes}
             totalSecondsSpent={session?.totalSecondsSpent ?? 0}
+            updateContactStatus={updateContactStatus}
           />
         )}
       </AnimatePresence>
