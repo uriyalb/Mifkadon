@@ -270,6 +270,16 @@ export default function LoginPage({ onLogin }: Props) {
         >
           {LOGIN_TEXT.disclaimer}
         </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="flex justify-center gap-4 mt-3"
+        >
+          <a href="/privacy" className="text-white/40 text-xs underline hover:text-white/70 transition-colors">מדיניות פרטיות</a>
+          <a href="/terms" className="text-white/40 text-xs underline hover:text-white/70 transition-colors">תנאי שימוש</a>
+        </motion.div>
       </motion.div>
     </div>
   );
