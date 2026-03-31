@@ -1,28 +1,22 @@
 import { ACCESS_CONFIG } from '../config/access';
 
-const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
-
 /**
  * Check if the given email appears in the public allowlist spreadsheet.
- * The sheet must be shared as "Anyone with the link can view" so we can
- * read it with an API key–free call via the public export endpoint.
+ * The sheet must be shared as "Anyone with the link can view".
  *
- * Uses the Sheets v4 REST API with the user's access token (already granted
- * after OAuth) — no extra API key needed.
+ * Uses Google's public CSV export endpoint — no OAuth token or API key needed.
  */
 export async function isEmailAllowed(
   email: string,
-  accessToken: string,
+  _accessToken: string,
 ): Promise<boolean> {
   if (!ACCESS_CONFIG.enabled) return true;
 
-  const tab = encodeURIComponent(ACCESS_CONFIG.allowlistTab);
-  const range = `${tab}!A:A`;
-  const url = `${SHEETS_API}/${ACCESS_CONFIG.allowlistSheetId}/values/${range}`;
+  const url =
+    `https://docs.google.com/spreadsheets/d/${ACCESS_CONFIG.allowlistSheetId}` +
+    `/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(ACCESS_CONFIG.allowlistTab)}`;
 
-  const resp = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const resp = await fetch(url);
 
   if (!resp.ok) {
     // If the sheet is unreachable treat it as "allowed" to avoid locking everyone out
@@ -30,11 +24,14 @@ export async function isEmailAllowed(
     return true;
   }
 
-  const data = await resp.json();
-  const rows: string[][] = (data.values as string[][]) ?? [];
+  const csv = await resp.text();
   const normalised = email.trim().toLowerCase();
 
-  return rows.some((row) => (row[0] ?? '').trim().toLowerCase() === normalised);
+  // Each row is a quoted CSV value; check if any cell in column A matches the email
+  return csv.split('\n').some((line) => {
+    const cell = line.split(',')[0].replace(/^"|"$/g, '').trim().toLowerCase();
+    return cell === normalised;
+  });
 }
 
 /** Build a WhatsApp deep-link for requesting access. */
