@@ -6,8 +6,6 @@ import LoginPage from './pages/LoginPage'
 import ImportPage from './pages/ImportPage'
 import SwipePage from './pages/SwipePage'
 import ResultsPage from './pages/ResultsPage'
-import PrivacyPage from './pages/PrivacyPage'
-import TermsPage from './pages/TermsPage'
 import TutorialModal from './components/TutorialModal'
 import WalkthroughOverlay from './components/WalkthroughOverlay'
 import LevelSummaryScreen from './components/LevelSummaryScreen'
@@ -223,10 +221,6 @@ function WalkthroughCompleteSaver({ active }: { active: boolean }) {
 }
 
 export default function App() {
-  const path = window.location.pathname;
-  if (path === '/privacy') return <PrivacyPage />;
-  if (path === '/terms') return <TermsPage />;
-
   return (
     <AuthProvider>
       <AppRouter />
