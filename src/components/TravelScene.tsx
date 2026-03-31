@@ -34,7 +34,7 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
   );
 
   return (
-    <div className="w-full select-none" dir="ltr" style={{ height: 166, cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
+    <div className="w-full select-none" dir="ltr" style={{ height: 150, cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
       {/* City labels row — LTR so progress goes left→right matching the character */}
       <div className="flex items-center justify-between px-3 pb-1">
         <span className="text-[11px] font-bold text-white/90 drop-shadow-sm">{fromCity}</span>
@@ -153,6 +153,35 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
           }}
         />
 
+        {/* Clickable list label — centered in the upper-middle of the scene */}
+        {onClick && (
+          <div
+            dir="rtl"
+            style={{
+              position: 'absolute',
+              top: '30%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              border: '1px solid rgba(255,215,0,0.4)',
+              borderRadius: 999,
+              padding: '4px 10px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span style={{ fontSize: 10 }}>📋</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,215,0,0.9)', letterSpacing: '0.02em' }}>
+              רשימת פוטנציאל מפקד
+            </span>
+          </div>
+        )}
+
         {/* Progress bar at bottom of road */}
         <div className="absolute bottom-0 left-0 w-full h-[3px] bg-white/10">
           <div
@@ -164,30 +193,6 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
           />
         </div>
       </div>
-
-      {/* Tap hint label — only shown when clickable */}
-      {onClick && (
-        <div
-          className="flex items-center justify-center gap-1.5 mt-1"
-          dir="rtl"
-          style={{ pointerEvents: 'none' }}
-        >
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.03em' }}>
-            הקש לצפייה ב
-          </span>
-          <span
-            style={{
-              fontSize: 9,
-              fontWeight: 800,
-              color: 'rgba(255,215,0,0.75)',
-              letterSpacing: '0.03em',
-            }}
-          >
-            רשימת פוטנציאל מפקד
-          </span>
-          <span style={{ fontSize: 9, color: 'rgba(255,215,0,0.6)' }}>▲</span>
-        </div>
-      )}
     </div>
   );
 }

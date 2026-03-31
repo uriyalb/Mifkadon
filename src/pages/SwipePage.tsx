@@ -7,7 +7,7 @@ import type { Contact, Priority, ChapterStats, ContactTrackingData } from '../ty
 import {
   queueContactRowUpdate, shouldFlush, flushContactRowUpdates, hasPendingUpdates,
   clearContactRow, syncTrackingSheet, loadTrackingData,
-  saveProgressTab, ensureProgressTab,
+  saveProgressTab, ensureProgressTab, updateTrackingContactStatus,
 } from '../services/googleSheets';
 import type { TrackingStats } from '../services/googleSheets';
 import ProgressDashboard from '../components/ProgressDashboard';
@@ -44,7 +44,7 @@ type ChapterPhase = 'swiping' | 'summary' | 'map';
 const MAX_HISTORY = 10;
 
 export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
-  const { user } = useAuth();
+  const { user, demoMode } = useAuth();
   const { session, spreadsheetId, trackingSheetId, swipeRight, swipeLeft, undoSwipe, addTimeSpent, setSyncState, chapterSizes, getProgressSnapshot, updateContactStatus } = useSession();
 
   const dragX = useMotionValue(0);
@@ -145,6 +145,16 @@ export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
       setDashboardTrackingData(new Map());
     }
   }, [user, trackingSheetId]);
+
+  const handleUpdateContactStatus = useCallback((contactId: string, status: string) => {
+    updateContactStatus(contactId, status);
+    if (user && trackingSheetId && !demoMode) {
+      updateTrackingContactStatus(
+        user.accessToken, trackingSheetId,
+        session?.selected ?? [], contactId, status,
+      ).catch(() => {});
+    }
+  }, [updateContactStatus, user, trackingSheetId, session?.selected, demoMode]);
 
   const isLastChapter = activeChapter >= chapterSizes.length - 1;
 
@@ -507,7 +517,7 @@ export default function SwipePage({ onFinish, onBack, onOpenTutorial }: Props) {
             trackingData={dashboardTrackingData}
             chapterSizes={chapterSizes}
             totalSecondsSpent={session?.totalSecondsSpent ?? 0}
-            updateContactStatus={updateContactStatus}
+            updateContactStatus={handleUpdateContactStatus}
           />
         )}
       </AnimatePresence>

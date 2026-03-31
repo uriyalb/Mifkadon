@@ -665,6 +665,7 @@ export async function createTrackingSheet(
     'סיכום שיחה',
     'ת. שיחה הבא',
     'התפקד/ה?',
+    'סטטוס',
   ];
   await fetch(
     `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A1?valueInputOption=RAW`,
@@ -782,7 +783,7 @@ async function syncTrackingContacts(
   const existingMap = new Map<string, string[]>();
   try {
     const resp = await fetch(
-      `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:H1000`,
+      `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:I1000`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (resp.ok) {
@@ -799,7 +800,7 @@ async function syncTrackingContacts(
 
   // Clear data rows (keep header)
   await fetch(
-    `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:H1000:clear`,
+    `${SHEETS_API}/${sheetId}/values/${TRACKING_TAB1_ENC}!A2:I1000:clear`,
     { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } }
   ).catch(() => {});
 
@@ -816,10 +817,11 @@ async function syncTrackingContacts(
       PRIORITY_TO_NUMBER[c.priority] ?? 2,
       SOURCE_LABEL[c.source] ?? c.source,
       phone,
-      saved[0], // ת. שיחה אחרון — preserved from admin
-      saved[1], // סיכום שיחה — preserved from admin
-      saved[2], // ת. שיחה הבא — preserved from admin
-      saved[3], // התפקד/ה? — preserved from admin
+      saved[0],     // ת. שיחה אחרון — preserved from admin
+      saved[1],     // סיכום שיחה — preserved from admin
+      saved[2],     // ת. שיחה הבא — preserved from admin
+      saved[3],     // התפקד/ה? — preserved from admin
+      c.status ?? '', // סטטוס — user-entered outreach status
     ];
   });
 
@@ -831,6 +833,29 @@ async function syncTrackingContacts(
       body: JSON.stringify({ values: rows }),
     }
   );
+}
+
+// ─── Update a single contact's status cell (column I) on the tracking sheet ──
+export async function updateTrackingContactStatus(
+  accessToken: string,
+  trackingSheetId: string,
+  approved: SelectedContact[],
+  contactId: string,
+  status: string,
+): Promise<void> {
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2, registered: 3 };
+  const sorted = [...approved].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  const index = sorted.findIndex((c) => c.id === contactId);
+  if (index === -1) return;
+  const row = index + 2; // 1-based row + 1 header row
+  await fetch(
+    `${SHEETS_API}/${trackingSheetId}/values/${TRACKING_TAB1_ENC}!I${row}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [[status]] }),
+    },
+  ).catch(() => {});
 }
 
 // ─── Update summary tab on tracking sheet ────────────────────────────────────
