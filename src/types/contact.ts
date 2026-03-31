@@ -19,6 +19,7 @@ export interface Contact {
 export interface SelectedContact extends Contact {
   priority: Priority;
   selectedAt: string; // ISO date string
+  status?: string;   // free-form outreach status (set by user in dashboard)
 }
 
 /** Manager-filled tracking data from the shared tracking spreadsheet (columns E-H) */

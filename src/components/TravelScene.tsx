@@ -34,7 +34,7 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
   );
 
   return (
-    <div className="w-full select-none" dir="ltr" style={{ height: 150, cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
+    <div className="w-full select-none" dir="ltr" style={{ height: 166, cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
       {/* City labels row — LTR so progress goes left→right matching the character */}
       <div className="flex items-center justify-between px-3 pb-1">
         <span className="text-[11px] font-bold text-white/90 drop-shadow-sm">{fromCity}</span>
@@ -164,6 +164,30 @@ export default function TravelScene({ fromCity, toCity, pct, current, total, dif
           />
         </div>
       </div>
+
+      {/* Tap hint label — only shown when clickable */}
+      {onClick && (
+        <div
+          className="flex items-center justify-center gap-1.5 mt-1"
+          dir="rtl"
+          style={{ pointerEvents: 'none' }}
+        >
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.03em' }}>
+            הקש לצפייה ב
+          </span>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              color: 'rgba(255,215,0,0.75)',
+              letterSpacing: '0.03em',
+            }}
+          >
+            רשימת פוטנציאל מפקד
+          </span>
+          <span style={{ fontSize: 9, color: 'rgba(255,215,0,0.6)' }}>▲</span>
+        </div>
+      )}
     </div>
   );
 }
